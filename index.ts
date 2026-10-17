@@ -2,11 +2,16 @@
 // Polar AccessLink is free, but its token endpoint needs HTTP Basic auth with the client secret and
 // does not allow browser requests. This function holds the secret and does the three jobs the app
 // needs:
-//   { action: "config" }                                        -> public client id for the consent screen
-//   { action: "exchange", code, redirect_uri, member_id }       -> access token, and registers the user once
-//   { action: "exercises", access_token, user_id }               -> the athlete's exercises
+//   { action: "config" }                                  -> public client id for the consent screen
+//   { action: "exchange", code, redirect_uri, member_id } -> access token, and registers the user once
+//   { action: "exercises", access_token }                 -> the athlete's exercises
 // Deploy:  supabase functions deploy polar
 // Secrets: supabase secrets set POLAR_CLIENT_ID=... POLAR_CLIENT_SECRET=...
+//
+// Per the AccessLink v3 spec the exercise endpoints are client-level, not user-scoped:
+//   GET https://www.polaraccesslink.com/v3/exercises      (the user token identifies the athlete)
+// They return exercises uploaded to Flow in the last 30 days, and only those uploaded after the user
+// registered with this client. Polar has no backfill before that point.
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,31 +29,16 @@ const json = (body: unknown, status = 200) =>
 
 const basic = () => btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
 
-// One exercise, in the few fields the app needs. Polar names them with hyphens.
+// One exercise, in the few fields the app needs. AccessLink sends snake_case names.
 function short(x: any) {
   return {
     id: x?.id ?? '',
-    start: x?.['start-time'] ?? null,
+    start: x?.start_time ?? null, // local time, e.g. 2026-10-18T07:12:33
     seconds: x?.duration ?? null, // ISO 8601 duration, converted in the app
     distance: x?.distance ?? null, // metres
-    hr: x?.['heart-rate']?.average ?? null,
-    sport: x?.sport ?? '',
+    hr: x?.heart_rate?.average ?? null,
+    sport: (x?.sport && x.sport !== 'OTHER' ? x.sport : x?.detailed_sport_info ?? x?.sport) ?? '',
   };
-}
-
-// Fallback for clients that only expose the older transaction flow.
-async function viaTransaction(uid: string, token: string) {
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-  const t = await fetch(`${API}/v3/users/${uid}/exercise-transactions`, { headers });
-  if (t.status === 204) return [];
-  if (!t.ok) return null;
-  const tx = await t.json().catch(() => null);
-  const uri = tx?.['resource-uri'], id = tx?.['transaction-id'];
-  if (!uri) return [];
-  const res = await fetch(uri, { headers });
-  const d = await res.json().catch(() => null);
-  if (id) await fetch(`${API}/v3/users/${uid}/exercise-transactions/${id}`, { method: 'PUT', headers }).catch(() => null);
-  return Array.isArray(d) ? d : Array.isArray(d?.exercises) ? d.exercises : [];
 }
 
 Deno.serve(async (req) => {
@@ -80,29 +70,27 @@ Deno.serve(async (req) => {
     if (!r.ok || !d?.access_token) {
       return json({ error: d?.error_description || d?.error || `Polar rejected the token request (${r.status}).` }, r.ok ? 400 : r.status);
     }
-    // AccessLink must know the user before it will offer their data. 409 means it already does.
+    // AccessLink must know the user before it will offer their data. 409 means it already does,
+    // and 403 means mandatory consents are missing (surfaced clearly on the next sync).
     const member = String(body.member_id ?? '');
+    let registered = true;
     if (member) {
-      await fetch(`${API}/v3/users`, {
+      const reg = await fetch(`${API}/v3/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${d.access_token}` },
         body: JSON.stringify({ 'member-id': member }),
       }).catch(() => null);
+      if (!reg || (reg.status !== 200 && reg.status !== 409)) registered = false;
     }
-    return json({ access_token: d.access_token, user_id: d.x_user_id });
+    return json({ access_token: d.access_token, user_id: d.x_user_id, registered });
   }
 
   if (action === 'exercises') {
-    const token = String(body.access_token ?? ''), uid = String(body.user_id ?? '');
-    if (!token || !uid) return json({ error: 'Missing access token or user id.' }, 400);
-    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-    const r = await fetch(`${API}/v3/users/${encodeURIComponent(uid)}/exercises`, { headers });
-
-    if (r.status === 404) {
-      const list = await viaTransaction(encodeURIComponent(uid), token);
-      if (list === null) return json({ error: 'Polar did not offer an exercise list for this connection.' }, 404);
-      return json({ exercises: list.map(short) });
-    }
+    const token = String(body.access_token ?? '');
+    if (!token) return json({ error: 'Missing access token.' }, 400);
+    const r = await fetch(`${API}/v3/exercises`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
     if (r.status === 204) return json({ exercises: [] });
     if (r.status === 401) return json({ error: 'Polar rejected this connection. Disconnect and connect again.' }, 401);
     if (r.status === 403) return json({ error: 'Polar needs you to accept its data-sharing consents at account.polar.com, then connect again.' }, 403);
