@@ -4,10 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<meta name="theme-color" content="#1f1c40">
+<meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Pace Pal"><meta name="format-detection" content="telephone=no">
 <title>Pace Pal: AI running coach</title>
-<script>try{if(localStorage.getItem('pp.theme')==='clean'){document.documentElement.classList.add('clean');var m=document.querySelector('meta[name=theme-color]');if(m)m.content='#ffffff'}}catch(e){}</script>
+<script>try{if(localStorage.getItem('pp.theme')==='pixel'){document.documentElement.classList.remove('clean');var m=document.querySelector('meta[name=theme-color]');if(m)m.content='#1f1c40'}else{document.documentElement.classList.add('clean')}}catch(e){document.documentElement.classList.add('clean')}</script>
+<script>/* hard reload (Ctrl+Shift+R style) once per fresh open: clear the HTTP cache and service-worker caches, then reload */
+(function(){if(sessionStorage.getItem('pp.hardreload')==='1')return;sessionStorage.setItem('pp.hardreload','1');
+function go(){location.reload(true)}
+try{if('caches' in window)caches.keys().then(function(ns){Promise.all(ns.map(function(n){return caches.delete(n)})).then(go).catch(go)}).catch(go);else go()}catch(e){go()}})();</script>
 <script>
 /* device detection: tags <html> with d-phone|d-tablet|d-desktop, touch|mouse, ios|android, portrait|landscape, standalone, kb, lite */
 (function(){var d=document.documentElement,n=navigator,ua=n.userAgent||'',mm=function(q){return matchMedia(q).matches};
@@ -935,6 +939,7 @@ try { prefs = cleanPrefs(JSON.parse(lsGet('pp.prefs', '{}'))); } catch {}
   for (const [k, v] of Object.entries(seed)) if (v && !prefs[k]) { const c = PREF_OK[k](v); if (c !== null) prefs[k] = { v: c, at: 1 }; }
   if (lsGet(LOOK_KEY, '') && !prefs.look && L2(look)) prefs.look = { v: L2(look), at: 1 };
   if (lsGet('pp.lookc', '') && !prefs.lookc && L2(lookClean)) prefs.lookc = { v: L2(lookClean), at: 1 };
+  if (!prefs.theme) prefs.theme = { v: lsGet('pp.theme', 'clean') === 'pixel' ? 'pixel' : 'clean', at: 0 };   // default look is the clean minimal black and white
 }
 const prefV = (k, d) => (prefs[k] ? prefs[k].v : d);
 const setPref = (k, v) => { const c = PREF_OK[k](v); if (c === null) return; prefs[k] = { v: c, at: Date.now() }; lsSet('pp.prefs', JSON.stringify(prefs)); markDirty(); schedulePush(); };
