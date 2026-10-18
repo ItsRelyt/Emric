@@ -5,8 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
 <meta name="theme-color" content="#1f1c40">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Pace Pal"><meta name="format-detection" content="telephone=no">
 <title>Pace Pal: AI running coach</title>
 <script>try{if(localStorage.getItem('pp.theme')==='clean'){document.documentElement.classList.add('clean');var m=document.querySelector('meta[name=theme-color]');if(m)m.content='#ffffff'}}catch(e){}</script>
+<script>
+/* device detection: tags <html> with d-phone|d-tablet|d-desktop, touch|mouse, ios|android, portrait|landscape, standalone, kb, lite */
+(function(){var d=document.documentElement,n=navigator,ua=n.userAgent||'',mm=function(q){return matchMedia(q).matches};
+var ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),and=/Android/i.test(ua),os=ios?'ios':and?'android':'other',lite=false;
+try{var c=n.connection;lite=!!((c&&c.saveData)||(n.deviceMemory&&n.deviceMemory<=2))}catch(e){}
+function set(){var w=innerWidth,h=innerHeight,touch=mm('(pointer:coarse)')||mm('(hover:none)'),dev=touch?(Math.min(w,h)<=520?'phone':'tablet'):'desktop',sa=mm('(display-mode:standalone)')||n.standalone===true;
+var cl={'d-phone':dev==='phone','d-tablet':dev==='tablet','d-desktop':dev==='desktop',touch:touch,mouse:!touch,ios:os==='ios',android:os==='android',standalone:sa,portrait:h>=w,landscape:h<w,lite:lite};
+for(var k in cl)d.classList.toggle(k,!!cl[k]);window.DEVICE={type:dev,os:os,touch:touch,portrait:h>=w,standalone:sa}}
+set();addEventListener('resize',set);addEventListener('orientationchange',set);
+var txt=function(t){return t&&(t.tagName==='TEXTAREA'||t.tagName==='SELECT'||(t.tagName==='INPUT'&&!/^(file|checkbox|radio|button|submit)$/.test(t.type)))};
+document.addEventListener('focusin',function(e){if(!d.classList.contains('touch')||!txt(e.target))return;d.classList.add('kb');var t=e.target;setTimeout(function(){try{t.scrollIntoView({block:'center',behavior:'smooth'})}catch(x){}},350)});
+document.addEventListener('focusout',function(){setTimeout(function(){if(!txt(document.activeElement))d.classList.remove('kb')},120)});
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
@@ -59,7 +74,7 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
 #add{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:12px}.wide{grid-column:1/-1}
 .stack{display:grid;gap:12px}
 [hidden]{display:none!important}
-@media(max-width:640px){.coachbox{grid-template-columns:1fr}}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){.coachbox{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.caret,.bob{animation:none}.btn{transition:none}}
 
 #menu,#sortsel,#cards{display:none}
@@ -86,7 +101,7 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
 .uline{font-size:1rem;padding:2px 0}.arrow{color:var(--peach);font-weight:700;padding:0 6px}
 .st-keep{background:var(--panel);color:var(--text)}
 .bub .upd{margin-top:8px;background:var(--ink)}
-@media(max-width:640px){
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
   body{line-height:1.6}
   main{gap:24px;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
   h1{font-size:1.5rem}
@@ -118,7 +133,7 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
 .recap-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .rstat{background:var(--panel2);border:2px solid var(--ink);padding:8px 10px;display:grid;gap:2px}.rstat .big{font-size:1.25rem}
 .dlabels{display:flex;gap:6px;margin-top:4px}.dlabels span{flex:1;text-align:center}
-@media(max-width:640px){.recap-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){.recap-grid{grid-template-columns:1fr 1fr}}
 /* clean black and white look (no pixel art), chosen in Settings > Coach style */
 html.clean{--ink:#111;--night:#fff;--panel:#fff;--panel2:#f1f1f1;--peach:#111;--mint:#2f7d52;--sky:#111;--berry:#b4412f;--text:#111;--mute:#595959;--disp:'Atkinson Hyperlegible',system-ui,sans-serif;color-scheme:light}
 .clean body{background:#fff;background-image:none}
@@ -154,7 +169,7 @@ html.clean{--ink:#111;--night:#fff;--panel:#fff;--panel2:#f1f1f1;--peach:#111;--
 .dpop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;display:grid;gap:8px;padding:12px;background:var(--panel);border:4px solid var(--ink);box-shadow:4px 4px 0 #0b0a1d;min-width:13rem}
 .dpop .btn{text-align:center}
 .clean .dpop{border:1px solid #111;border-radius:12px;box-shadow:none}
-@media(max-width:640px){.dmenu{flex:1 1 40%}.dpop{position:static;margin-top:8px;box-shadow:none}}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){.dmenu{flex:1 1 40%}.dpop{position:static;margin-top:8px;box-shadow:none}}
 .sdot{position:relative;flex:none;width:14px;height:14px;min-height:0;padding:0;border-radius:50%;border:2px solid var(--ink);background:var(--mute);cursor:pointer}
 .sdot::after{content:'';position:absolute;inset:-14px}
 .sdot[data-s=ok]{background:var(--mint)}.sdot[data-s=bad]{background:var(--berry)}.sdot[data-s=off]{background:var(--mute)}
@@ -230,6 +245,43 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
 #sprite{cursor:pointer}#sprite.hop{animation:mHop .6s ease-out}
 .cf{position:fixed;width:9px;height:9px;pointer-events:none;z-index:60;animation:mConf 1.05s cubic-bezier(.2,.7,.3,1) forwards}.clean .cf{border-radius:50%}
 }
+
+/* ---------- device-aware layer (classes set by the detection script in <head>) ---------- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh;-webkit-tap-highlight-color:transparent}
+a,button,summary,label,select,.btn,.chip,.tab,.field{touch-action:manipulation}
+.scroll,#chips,.chatlog{overscroll-behavior-x:contain}
+html.standalone{overscroll-behavior-y:contain}
+html.lite *,html.lite *::before,html.lite *::after{animation:none!important}
+/* touch: 16px fields stop iOS zooming in, 44px targets, no sticky hover */
+@media(pointer:coarse){
+  input.field,select.field,textarea.field{font-size:16px}
+  .btn,.tab,.dmenu>summary{min-height:44px}.chip{min-height:40px;display:inline-flex;align-items:center}
+  .del{min-width:44px;min-height:44px}.th button{min-height:40px}
+  .btn{-webkit-touch-callout:none}
+}
+@media(hover:none){
+  .btn:hover:not(:disabled){transform:none;box-shadow:0 4px 0 var(--sh)}
+  .clean .btn:hover:not(:disabled){opacity:1;box-shadow:none}
+  .week .px:hover{transform:none}.bars i:hover{filter:none}
+  tbody tr:hover{background:inherit}.fold>summary:hover{color:inherit}
+}
+html.ios input[type=date].field{-webkit-appearance:none;appearance:none;min-height:44px;text-align:left}
+/* phones, portrait: tab bar at the thumb, hidden while the keyboard is up */
+html.d-phone.portrait .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;margin:0;border-top:4px solid var(--ink);padding:8px max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left))}
+html.clean.d-phone.portrait .tabs{border-top:1px solid #111}
+html.d-phone.portrait.kb .tabs{display:none}
+html.d-phone.portrait main{padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+html.d-phone.portrait.kb main{padding-bottom:24px}
+html.d-phone .chatlog{max-height:50vh;max-height:50dvh}
+/* phones, landscape: compact so content still fits in ~390px of height */
+html.d-phone.landscape .tabs{padding:4px 0}html.d-phone.landscape .tab{min-height:40px;padding:6px}
+html.d-phone.landscape .coachbox{grid-template-columns:auto 1fr}
+html.d-phone.landscape .chatlog{max-height:40vh;max-height:40dvh}
+html.d-phone.landscape main{gap:16px}
+/* tablets: touch targets, comfortable width */
+html.d-tablet main{max-width:960px}
+html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
 </style>
 </head>
 <body>
@@ -258,8 +310,8 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
     </div>
     <div id="authform" class="stack">
       <p class="mute sm" style="margin:0" id="authdesc">Sign in or create an account to sync everything (runs, coach plans, chat, profile, look and settings) across all your devices.</p>
-      <label class="stack sm">Email<input id="authemail" class="field" type="email" autocomplete="email" placeholder="runner@example.com"></label>
-      <label class="stack sm">Password<span class="row" style="flex-wrap:nowrap"><input id="authpass" class="field grow" type="password" autocomplete="current-password" placeholder="At least 8 characters"><button class="chip" id="passeye" type="button" aria-pressed="false">Show</button></span></label>
+      <label class="stack sm">Email<input id="authemail" class="field" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="runner@example.com"></label>
+      <label class="stack sm">Password<span class="row" style="flex-wrap:nowrap"><input id="authpass" class="field grow" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" enterkeyhint="go" placeholder="At least 8 characters"><button class="chip" id="passeye" type="button" aria-pressed="false">Show</button></span></label>
       <label class="stack sm" id="authconfwrap" hidden>Confirm password<input id="authconf" class="field" type="password" autocomplete="new-password"></label>
       <div class="row">
         <button class="btn mint" id="authsubmit">Sign in</button>
@@ -393,7 +445,7 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
       <p class="say" id="say" aria-live="polite"></p>
       <div class="row" id="feel" role="group" aria-label="How do you feel today?" style="margin-bottom:12px"><button class="chip" data-f="Fresh" aria-pressed="false">Fresh</button><button class="chip" data-f="Normal" aria-pressed="false">Normal</button><button class="chip" data-f="Tired" aria-pressed="false">Tired</button><button class="chip" data-f="Sore" aria-pressed="false">Sore</button><button class="chip" data-f="Ill" aria-pressed="false">Ill</button></div>
       <div class="row">
-        <input id="note" class="field grow" maxlength="300" aria-label="How do you feel today?" placeholder="How do you feel today? Sore, tired, fresh…">
+        <input id="note" enterkeyhint="send" class="field grow" maxlength="300" aria-label="How do you feel today?" placeholder="How do you feel today? Sore, tired, fresh…">
         <button class="btn" id="ask">Ask coach</button>
       </div>
       <p id="err" class="c-berry" role="alert" hidden></p>
@@ -421,7 +473,7 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
     <div class="row between"><h2>Ask your coach</h2><button class="chip" id="chatclear">Clear chat</button></div>
     <div id="chatlog" class="chatlog" aria-live="polite"></div>
     <div class="row" id="chatchips"><button class="chip" data-q="Why is today's session what it is?">Why today's session?</button><button class="chip" data-q="Can I swap tomorrow's session?">Swap tomorrow?</button><button class="chip" data-q="Make this week a bit easier.">Easier week</button><button class="chip" data-q="My legs feel heavy. What should I do?">Heavy legs</button></div>
-    <div class="row"><input id="chatin" class="field grow" maxlength="300" aria-label="Message your coach" placeholder="Ask about your plan or how you feel…"><button class="btn" id="chatsend">Send</button></div>
+    <div class="row"><input id="chatin" enterkeyhint="send" class="field grow" maxlength="300" aria-label="Message your coach" placeholder="Ask about your plan or how you feel…"><button class="btn" id="chatsend">Send</button></div>
     <p id="chaterr" class="c-berry sm" role="alert" style="margin:0" hidden></p>
   </section>
   </div>
@@ -443,7 +495,7 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
     <section id="prog" class="stack"></section></div><div id="p-log" class="stack" hidden>
     <section class="px stack">
       <div class="row between"><h2>Activity log <span class="mute sm" id="count"></span></h2><button class="chip" id="clear">Clear log</button></div>
-      <div class="row"><input id="q" class="field grow" aria-label="Search workouts" placeholder="Search title, notes, date…"><div class="row" id="chips"></div></div>
+      <div class="row"><input id="q" enterkeyhint="search" autocomplete="off" class="field grow" aria-label="Search workouts" placeholder="Search title, notes, date…"><div class="row" id="chips"></div></div>
       <select id="sortsel" class="field" aria-label="Sort workouts"><option value="date:-1">Newest first</option><option value="date:1">Oldest first</option><option value="km:-1">Longest distance</option><option value="sec:-1">Longest time</option><option value="pace:1">Fastest pace</option></select>
       <div id="cards"></div>
       <div class="scroll">
@@ -459,11 +511,11 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
         <input class="field" type="date" name="date" required aria-label="Date">
         <select class="field" name="type" aria-label="Type"><option>Run</option><option>Ride</option><option>Walk</option><option>Swim</option><option>Workout</option></select>
         <input class="field wide" name="title" placeholder="Title (e.g. Easy loop)" aria-label="Title">
-        <input class="field" name="km" type="number" step="0.01" min="0" placeholder="Distance km" aria-label="Distance in km">
-        <input class="field" name="mins" type="text" inputmode="decimal" pattern="^[\d:.]+$" title="Enter minutes (e.g. 30 or 30.5), MM:SS (e.g. 4:00), or HH:MM:SS (e.g. 1:30:00)" placeholder="Duration (30, 4:00, 1:30:00)" aria-label="Duration. Enter minutes like 30 or 30.5, or use colon format like 4:00 for 4 minutes, or 1:30:00 for 1 hour 30 minutes">
+        <input class="field" name="km" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Distance km" aria-label="Distance in km">
+        <input class="field" name="mins" type="text" inputmode="text" pattern="^[\d:.]+$" title="Enter minutes (e.g. 30 or 30.5), MM:SS (e.g. 4:00), or HH:MM:SS (e.g. 1:30:00)" placeholder="Duration (30, 4:00, 1:30:00)" aria-label="Duration. Enter minutes like 30 or 30.5, or use colon format like 4:00 for 4 minutes, or 1:30:00 for 1 hour 30 minutes">
         <p class="mute xs wide" style="margin:0">Duration accepts minutes (e.g. <code>30</code> or <code>30.5</code>), <code>MM:SS</code> (e.g. <code>4:00</code>), or <code>HH:MM:SS</code> (e.g. <code>1:30:00</code>).</p>
-        <input class="field" name="hr" type="number" min="30" max="230" placeholder="Avg HR (optional)" aria-label="Average heart rate">
-        <input class="field" name="elev" type="number" min="0" placeholder="Elevation m (optional)" aria-label="Elevation gain in metres">
+        <input class="field" name="hr" type="number" inputmode="numeric" min="30" max="230" placeholder="Avg HR (optional)" aria-label="Average heart rate">
+        <input class="field" name="elev" type="number" inputmode="numeric" min="0" placeholder="Elevation m (optional)" aria-label="Elevation gain in metres">
         <div class="wide"><button class="btn mint" type="submit">Save workout</button></div>
       </form>
     </details>
@@ -578,7 +630,7 @@ function applyTheme(t, persist) {
 $('#theme').onchange = (e) => applyTheme(e.target.value, true);
 
 /* ---------- phone layout helpers ---------- */
-const mq = matchMedia('(max-width:640px)');
+const mq = matchMedia('(max-width:640px),(pointer:coarse) and (max-height:500px)');
 const isMobile = () => mq.matches;
 const page = () => (isMobile() ? 10 : 25);
 // On phones, secondary sections fold away so the screen shows one thing at a time.
@@ -792,7 +844,7 @@ const LOOK_KEY = 'pp.look', DEFAULT_LOOK = { hat: 'Headband', outfit: 'Gym tank'
 const look = (() => { try { return { ...DEFAULT_LOOK, ...JSON.parse(lsGet(LOOK_KEY, '{}')) }; } catch { return { ...DEFAULT_LOOK }; } })();
 /* ---------- coach mood: expressions, idle blink + breathing, and a working animation ---------- */
 let moodFlash = '', moodFlashT = null, blinking = false, scan = 0, moodT = null;
-const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
 function working() { try { return busy || chatBusy; } catch { return busy; } }
 function coachMood() {
   if (working()) return scan ? 'think2' : 'think';   // eyes scan left and right while the coach thinks
@@ -2699,6 +2751,10 @@ applyPrefs({}, true); renderDash(); restoreCoach(); maybeRefresh(); scheduleMidn
 if (PWA && 'serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 updateAuthUI();
 initAuth().then(() => getGroqKey()).then(() => { syncNow(); maybeRefresh(); }).finally(() => { try { polarUi(); polarLanded().catch(() => {}); } catch (e) {} });
+</script>
+<script>
+(function(){var d=document.documentElement;['authpanel','settings','stravapanel'].forEach(function(id){var el=document.getElementById(id);if(!el)return;
+new MutationObserver(function(){if(!el.hidden&&d.classList.contains('touch'))setTimeout(function(){try{el.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}},60)}).observe(el,{attributes:true,attributeFilter:['hidden']})})})();
 </script>
 </body>
 </html>
