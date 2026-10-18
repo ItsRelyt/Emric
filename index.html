@@ -63,7 +63,10 @@ svg{image-rendering:pixelated}
 .badge{font:600 1rem var(--disp);background:var(--peach);color:var(--ink);border:2px solid var(--ink);padding:0 8px}
 dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.875rem}dt{color:var(--mute)}dd{margin:0}
 ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
-.bars{display:flex;align-items:end;gap:6px;height:128px}.bars i{flex:1;border:4px solid var(--ink)}
+.bars{display:flex;align-items:end;gap:6px;height:128px}.bars i{flex:1;border:4px solid var(--ink);cursor:pointer;position:relative;touch-action:manipulation;user-select:none}
+.bars i.sel{outline:3px solid var(--peach);outline-offset:2px;filter:brightness(1.25)}
+.clean .bars i.sel{outline:2px solid #111;filter:none}
+#barval,#recbarval{min-height:1.5em}
 .scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.875rem}th,td{padding:8px;text-align:left}
 th{background:var(--ink);font-family:var(--disp)}th button{all:unset;cursor:pointer;font:inherit}th button:focus-visible{outline:3px solid var(--peach)}
 .r{text-align:right;font-variant-numeric:tabular-nums}.nw{white-space:nowrap}
@@ -373,6 +376,7 @@ html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
         <label class="stack sm">Look<select id="theme" class="field"><option value="pixel">Pixel art (colour)</option><option value="clean">Clean (minimal B&amp;W)</option></select></label>
         <label class="stack sm">Weekly streak goal (workouts / week)<input id="goal" class="field" type="number" min="1" max="14"></label>
       </div>
+      <label class="stack sm" style="max-width:20rem">Units<select id="units" class="field"><option value="km">Kilometres (km)</option><option value="mi">Miles (mi)</option></select></label>
       <div class="row">
         <label class="stack sm grow">Hat<select id="hat" class="field"></select></label>
         <label class="stack sm grow">Outfit<select id="outfit" class="field"></select></label>
@@ -489,7 +493,8 @@ html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
     <section class="tiles" id="tiles"></section>
     <section class="px">
       <h2 style="margin-bottom:12px">Weekly run distance</h2>
-      <div class="bars" id="bars" role="img"></div>
+      <div class="bars" id="bars" role="group" aria-label="Weekly run distance for the last 12 weeks"></div>
+      <p id="barval" class="sm" role="status" aria-live="polite" style="margin:8px 0 0">Tap a bar to see its week and distance.</p>
       <div class="row between mute sm" style="margin-top:8px"><span>12 weeks ago</span><span id="peak"></span><span>this week</span></div>
     </section>
     <section id="prog" class="stack"></section></div><div id="p-log" class="stack" hidden>
@@ -511,7 +516,7 @@ html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
         <input class="field" type="date" name="date" required aria-label="Date">
         <select class="field" name="type" aria-label="Type"><option>Run</option><option>Ride</option><option>Walk</option><option>Swim</option><option>Workout</option></select>
         <input class="field wide" name="title" placeholder="Title (e.g. Easy loop)" aria-label="Title">
-        <input class="field" name="km" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Distance km" aria-label="Distance in km">
+        <input class="field" name="km" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Distance" aria-label="Distance">
         <input class="field" name="mins" type="text" inputmode="text" pattern="^[\d:.]+$" title="Enter minutes (e.g. 30 or 30.5), MM:SS (e.g. 4:00), or HH:MM:SS (e.g. 1:30:00)" placeholder="Duration (30, 4:00, 1:30:00)" aria-label="Duration. Enter minutes like 30 or 30.5, or use colon format like 4:00 for 4 minutes, or 1:30:00 for 1 hour 30 minutes">
         <p class="mute xs wide" style="margin:0">Duration accepts minutes (e.g. <code>30</code> or <code>30.5</code>), <code>MM:SS</code> (e.g. <code>4:00</code>), or <code>HH:MM:SS</code> (e.g. <code>1:30:00</code>).</p>
         <input class="field" name="hr" type="number" inputmode="numeric" min="30" max="230" placeholder="Avg HR (optional)" aria-label="Average heart rate">
@@ -539,6 +544,19 @@ const todayStr = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-
 const clean = (s) => String(s || '').replace(/\[strava:\/\/[^\]]*\]/g, '');
 const fmtPace = (s) => { if (!s || !isFinite(s)) return '–'; const t = Math.round(s); return `${Math.floor(t / 60)}:${pad(t % 60)}`; };
 const fmtDur = (s) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${pad(m)}m` : `${m}m ${pad(Math.floor(s % 60))}s`; };
+
+/* ---------- units: km or miles. Everything is stored in km; this only changes what is shown ---------- */
+const MI = 1.609344;
+const uMi = () => { try { return prefs.units.v === 'mi'; } catch { return false; } };
+const unitLabel = () => (uMi() ? 'mi' : 'km');
+const paceUnit = () => (uMi() ? '/mi' : '/km');
+const convKm = (km) => (uMi() ? km / MI : km);
+const toKm = (v) => (uMi() ? v * MI : v);
+const fmtKm = (km) => { if (km == null || !isFinite(km)) return '–'; return `${Math.round(convKm(+km) * 10) / 10} ${unitLabel()}`; };
+const kmNum = (km) => (km == null || !isFinite(km) ? null : Math.round(convKm(+km) * 10) / 10);
+const fmtPaceUnit = (secPerKm) => fmtPace(secPerKm == null ? null : (uMi() ? secPerKm * MI : secPerKm));
+const fmtKmRange = (lo, hi) => `${Math.round(convKm(lo) * 10) / 10}-${Math.round(convKm(hi) * 10) / 10} ${unitLabel()}`;
+const paceBand = (band) => String(band || '').split('-').map((x) => { const p = parsePace(x); return p == null ? x : fmtPaceUnit(p); }).join('-');
 
 /* ---------- look: pixel art (colour) or clean (black and white) ---------- */
 const theme = () => document.documentElement.classList.contains('clean');
@@ -637,7 +655,7 @@ const page = () => (isMobile() ? 10 : 25);
 const fold = (title, inner) => (isMobile() ? `<details class="fold"><summary>${title}</summary>${inner}</details>` : `<h2>${title}</h2>${inner}`);
 function card(w) {
   const n = clean(w.notes);
-  const bits = [w.km ? `${w.km} km` : '', w.sec ? fmtDur(w.sec) : '', w.pace ? `${fmtPace(w.pace)}/km` : '', w.hr ? `${w.hr} bpm` : '', w.elev ? `${w.elev} m up` : ''].filter(Boolean).join(' · ');
+  const bits = [w.km ? fmtKm(w.km) : '', w.sec ? fmtDur(w.sec) : '', w.pace ? `${fmtPaceUnit(w.pace)}${paceUnit()}` : '', w.hr ? `${w.hr} bpm` : '', w.elev ? `${w.elev} m up` : ''].filter(Boolean).join(' · ');
   return `<div class="wcard"><div class="row"><span class="mute sm">${esc(w.date)}</span><span class="chip" style="cursor:default">${esc(w.type)}</span></div><div class="d">${esc(w.title)}</div><div class="sm">${esc(bits)}</div>${n ? `<div class="trunc mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}<button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></div>`;
 }
 function applyLayout() {
@@ -875,6 +893,8 @@ function fillLookSelects() {
   $('#hat').innerHTML = Object.keys(HATS).map((n) => `<option>${n}</option>`).join('');
   $('#outfit').innerHTML = Object.keys(OUTFITS).map((n) => `<option>${n}</option>`).join('');
   $('#hat').value = curLook().hat; $('#outfit').value = curLook().outfit; $('#goal').value = getGoal();
+  $('#units').value = uMi() ? 'mi' : 'km';
+  const kmIn = $('#add [name=km]'); if (kmIn) { kmIn.placeholder = `Distance (${unitLabel()})`; kmIn.setAttribute('aria-label', `Distance in ${uMi() ? 'miles' : 'kilometres'}`); }
 }
 const setLook = () => { lsSet(theme() ? 'pp.lookc' : LOOK_KEY, JSON.stringify(curLook())); setPref(theme() ? 'lookc' : 'look', { hat: curLook().hat, outfit: curLook().outfit }); drawCoach(); renderRecap(); };
 $('#hat').onchange = (e) => { curLook().hat = e.target.value; setLook(); };
@@ -884,6 +904,12 @@ $('#surprise').onclick = () => {
   const L = curLook(); L.hat = pick(HATS); L.outfit = pick(OUTFITS); $('#hat').value = L.hat; $('#outfit').value = L.outfit; setLook();
 };
 $('#goal').onchange = () => { lsSet('pp.goal', String(Math.max(1, Math.min(14, parseInt($('#goal').value, 10) || 1)))); $('#goal').value = getGoal(); setPref('goal', getGoal()); renderDash(); };
+$('#units').onchange = (e) => {
+  setPref('units', e.target.value);
+  fillLookSelects(); renderDash();
+  if (coachLast && coachLast.data) renderResults(coachLast.data);
+  renderChat();
+};
 
 /* ---------- synced preferences: each setting carries its own timestamp and the newest edit wins ---------- */
 let dv = 0;   // bumps on every local change so a sync can tell whether something changed while it was running
@@ -898,6 +924,7 @@ const PREF_OK = {
   sort: (v) => (v && ['date', 'type', 'title', 'km', 'sec', 'pace', 'hr', 'elev'].includes(v.k) && (v.d === 1 || v.d === -1) ? { k: v.k, d: v.d } : null),
   type: (v) => (typeof v === 'string' ? v.slice(0, 40) : null),
   recap: (v) => (['', 'this', 'last'].includes(v) ? v : null),
+  units: (v) => (v === 'mi' || v === 'km' ? v : null),
   feel: (v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(String(v.day)) ? { day: v.day, f: ['Fresh', 'Normal', 'Tired', 'Sore', 'Ill'].includes(v.f) ? v.f : '', note: String(v.note || '').slice(0, 300) } : null),
 };
 const cleanPrefs = (p) => { const o = {}; for (const k of Object.keys(PREF_OK)) { const e = p && p[k]; if (!e) continue; const v = PREF_OK[k](e.v); if (v !== null) o[k] = { v, at: nOrNull(e.at) ?? 0 }; } return o; };
@@ -922,6 +949,7 @@ function applyPrefs(old, first) {   // old = prefs before the merge; apply whate
   fillLookSelects(); drawCoach();
   document.querySelectorAll('#feel .chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.f === feeling)));
   if (coachLast && coachLast.data && ch('feel') && safetyCheck('')) renderResults(coachLast.data);
+  if (coachLast && coachLast.data && ch('units')) renderResults(coachLast.data);
 }
 
 /* ---------- state ---------- */
@@ -953,19 +981,30 @@ function renderDash() {
   if (!$('#say').textContent.trim() || /^Load some/.test($('#say').textContent)) say('Ready when you are. Tell me how you feel and I will plan today.', true);
   const s = summarize(ws, todayStr());
   const delta = s.run_km_prev28 ? Math.round((s.run_km_last28 / s.run_km_prev28 - 1) * 100) : null;
-  const d = s.days_since_last_activity;
+  const d = s.days_since_last_activity, ul = unitLabel();
   $('#tiles').innerHTML =
     tile(FLAME, 'Weekly streak', `${s.current_weekly_streak_weeks} week${s.current_weekly_streak_weeks === 1 ? '' : 's'}`, `${s.sessions_this_week}/${s.weekly_streak_goal_sessions} workouts this week`) +
-    tile(SHOE, 'Run km, last 7 days', `${s.run_km_last7} km`, `${s.runs_last7} run${s.runs_last7 === 1 ? '' : 's'}`) +
-    tile(null, 'Run km, last 28 days', `${s.run_km_last28} km`, delta === null ? 'no earlier runs' : `${delta > 0 ? '+' : ''}${delta}% vs previous 28 days`) +
-    tile(MOON, 'Last activity', d === 0 ? 'Today' : d === null ? '–' : `${d}d ago`, `median run pace ${s.median_run_pace_last28}/km`);
-  const wk = s.weekly_run_km_last12_oldest_first, mx = Math.max(1, ...wk);
-  $('#bars').setAttribute('aria-label', `Weekly run kilometres for the last 12 weeks: ${wk.join(', ')}`);
-  $('#bars').innerHTML = wk.map((v, i) => `<i title="${v} km" style="height:${Math.max(6, v / mx * 100)}%;background:${i === 11 ? COL().hi : COL().lo}"></i>`).join('');
-  $('#peak').textContent = `peak ${mx} km`;
+    tile(SHOE, `Run ${ul}, last 7 days`, fmtKm(s.run_km_last7), `${s.runs_last7} run${s.runs_last7 === 1 ? '' : 's'}`) +
+    tile(null, `Run ${ul}, last 28 days`, fmtKm(s.run_km_last28), delta === null ? 'no earlier runs' : `${delta > 0 ? '+' : ''}${delta}% vs previous 28 days`) +
+    tile(MOON, 'Last activity', d === 0 ? 'Today' : d === null ? '–' : `${d}d ago`, `median run pace ${fmtPaceUnit(parsePace(s.median_run_pace_last28))}${paceUnit()}`);
+  const wk = s.weekly_run_km_last12_oldest_first, mx = Math.max(1, ...wk), today = todayStr();
+  const wkLabel = (i) => `Week of ${shortDate(addDays(today, -(((11 - i) * 7) + 6)))}`;
+  $('#bars').setAttribute('aria-label', `Weekly run distance for the last 12 weeks: ${wk.map((v) => fmtKm(v)).join(', ')}`);
+  $('#bars').innerHTML = wk.map((v, i) => `<i role="button" tabindex="0" data-i="${i}" data-label="${esc(wkLabel(i))}" data-v="${esc(fmtKm(v))}" aria-label="${esc(wkLabel(i) + ': ' + fmtKm(v))}" title="${esc(fmtKm(v))}" style="height:${Math.max(6, v / mx * 100)}%;background:${i === 11 ? COL().hi : COL().lo}"></i>`).join('');
+  $('#peak').textContent = `peak ${fmtKm(mx)}`;
+  const bv = $('#barval'); if (bv) bv.textContent = 'Tap a bar to see its week and distance.';
   renderLog(); renderProgress(); renderRecap(); showTab(tab);
   if (document.body.classList.contains('intro')) countUp();
 }
+const nearestBar = (box, x) => { let best = null, bd = Infinity; box.querySelectorAll('i[data-i]').forEach((el) => { const r = el.getBoundingClientRect(), d = Math.abs(x - (r.left + r.width / 2)); if (d < bd) { bd = d; best = el; } }); return best; };
+function pickBar(el) {
+  if (!el) return;
+  const box = $('#bars'); if (!box) return;
+  box.querySelectorAll('i[data-i]').forEach((b) => b.classList.toggle('sel', b === el));
+  const t = $('#barval'); if (t) t.textContent = `${el.dataset.label}: ${el.dataset.v}`;
+}
+$('#bars').onclick = (e) => { const box = $('#bars'); pickBar(e.target.closest('#bars i[data-i]') || nearestBar(box, e.clientX)); };
+$('#bars').onkeydown = (e) => { if (e.key !== 'Enter' && e.key !== ' ') return; const el = e.target.closest('i[data-i]'); if (el) { e.preventDefault(); pickBar(el); } };
 function renderLog() {
   const types = ['All', ...new Set(ws.map((w) => w.type))]; if (!types.includes(type)) type = 'All';
   const t = q.trim().toLowerCase();
@@ -973,9 +1012,9 @@ function renderLog() {
     .sort((a, b) => { const nul = sort.d > 0 ? Infinity : -1, x = a[sort.k] ?? nul, y = b[sort.k] ?? nul; return (x > y ? 1 : x < y ? -1 : 0) * sort.d; });
   $('#chips').innerHTML = types.map((x) => `<button class="chip" data-t="${esc(x)}" aria-pressed="${x === type}">${esc(x)}</button>`).join('');
   $('#count').textContent = `(${rows.length} of ${ws.length})`;
-  const cols = [['date', 'Date'], ['type', 'Type'], ['title', 'Title'], ['km', 'km'], ['sec', 'Time'], ['pace', 'Pace'], ['hr', 'HR'], ['elev', 'Elev']];
+  const cols = [['date', 'Date'], ['type', 'Type'], ['title', 'Title'], ['km', unitLabel()], ['sec', 'Time'], ['pace', `Pace ${paceUnit()}`], ['hr', 'HR'], ['elev', 'Elev']];
   $('#thead').innerHTML = '<tr>' + cols.map(([k, l]) => `<th class="${['km', 'sec', 'pace', 'hr', 'elev'].includes(k) ? 'r' : ''}" aria-sort="${sort.k === k ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}"><button data-k="${k}">${l}${sort.k === k ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('') + '<th><span class="sr">Delete</span></th></tr>';
-  $('#tbody').innerHTML = rows.slice(0, limit).map((w) => { const n = clean(w.notes); return `<tr><td class="nw">${esc(w.date)}</td><td><span class="chip">${esc(w.type)}</span></td><td class="tt"><div class="trunc">${esc(w.title)}</div>${n ? `<div class="trunc mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}</td><td class="r">${w.km || '–'}</td><td class="r nw">${fmtDur(w.sec)}</td><td class="r">${w.pace ? fmtPace(w.pace) : '–'}</td><td class="r">${w.hr ?? '–'}</td><td class="r">${w.elev ?? '–'}</td><td><button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></td></tr>`; }).join('');
+  $('#tbody').innerHTML = rows.slice(0, limit).map((w) => { const n = clean(w.notes); return `<tr><td class="nw">${esc(w.date)}</td><td><span class="chip">${esc(w.type)}</span></td><td class="tt"><div class="trunc">${esc(w.title)}</div>${n ? `<div class="trunc mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}</td><td class="r">${w.km ? kmNum(w.km) : '–'}</td><td class="r nw">${fmtDur(w.sec)}</td><td class="r">${w.pace ? fmtPaceUnit(w.pace) : '–'}</td><td class="r">${w.hr ?? '–'}</td><td class="r">${w.elev ?? '–'}</td><td><button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></td></tr>`; }).join('');
   $('#nomatch').hidden = rows.length > 0; $('#more').hidden = rows.length <= limit;
   $('#cards').innerHTML = rows.length ? rows.slice(0, limit).map(card).join('') : '<p class="mute center">No workouts match. Clear the search or pick another type.</p>';
   $('#sortsel').value = `${sort.k}:${sort.d}`;
@@ -993,15 +1032,15 @@ function renderResults(d) {
   $('#insights').hidden = false;
   const item = d.week[i0], t = todayDetail(item, a), st = dayStatus(item, today, a);
   const banner = st.s === 'done' && st.text ? `<p class="sm c-mint" style="margin:0">Done: ${esc(st.text)}</p>` : st.s === 'changed' ? `<p class="sm c-peach" style="margin:0">You logged ${esc(st.text)}, which differs from the plan (${esc(st.why)}). Your coach has adjusted the rest of the week.</p>` : '';
-  $('#today').innerHTML = `<div class="row"><span class="badge">${esc(item.kind)}</span><h2>${esc(t.title)}</h2></div>${item.note ? `<p class="sm c-berry" style="margin:0">${esc(item.note)}</p>` : ''}${banner}<p class="pre" style="margin:0">${esc(t.plan)}</p><dl>${dl('Target', t.target)}${dl('Duration', t.duration)}${dl('Distance', t.distance_km ? t.distance_km + ' km' : '')}${dl('Why', t.why)}${dl('If you feel worse', t.swap_if_worse)}</dl>`;
+  $('#today').innerHTML = `<div class="row"><span class="badge">${esc(item.kind)}</span><h2>${esc(t.title)}</h2></div>${item.note ? `<p class="sm c-berry" style="margin:0">${esc(item.note)}</p>` : ''}${banner}<p class="pre" style="margin:0">${esc(t.plan)}</p><dl>${dl('Target', t.target)}${dl('Duration', t.duration)}${dl('Distance', t.distance_km ? fmtKm(t.distance_km) : '')}${dl('Why', t.why)}${dl('If you feel worse', t.swap_if_worse)}</dl>`;
   $('#insights').innerHTML = fold('What I see', `<ul>${d.insights.map((x) => `<li><b class="d c-mint">${esc(x.title)}</b><p class="sm" style="margin:0">${esc(x.detail)}</p></li>`).join('')}</ul>`);
   const L = planLen(today), days = d.week.slice(i0, i0 + L), names = { done: 'Done', changed: 'Changed', missed: 'Missed' }, long = L > 7;
-  const cardOf = (x) => { const s = dayStatus(x, today, a).s; return `<div class="px"><div class="row between"><span class="d c-sky">${esc(x.day || dayLabel(x.date))}${x.date === today ? ' (today)' : ''}</span><span class="row" style="gap:6px"><span class="chip" style="cursor:default">${esc(x.kind)}</span>${names[s] ? `<span class="st st-${s}">${names[s]}</span>` : ''}</span></div><p class="sm" style="margin:6px 0 0">${esc(x.plan)}${x.km ? ` (${esc(x.km)} km)` : ''}${x.auto ? ' <span class="mute xs">· outline</span>' : ''}</p></div>`; };
+  const cardOf = (x) => { const s = dayStatus(x, today, a).s; return `<div class="px"><div class="row between"><span class="d c-sky">${esc(x.day || dayLabel(x.date))}${x.date === today ? ' (today)' : ''}</span><span class="row" style="gap:6px"><span class="chip" style="cursor:default">${esc(x.kind)}</span>${names[s] ? `<span class="st st-${s}">${names[s]}</span>` : ''}</span></div><p class="sm" style="margin:6px 0 0">${esc(x.plan)}${x.km ? ` (${esc(fmtKm(x.km))})` : ''}${x.auto ? ' <span class="mute xs">· outline</span>' : ''}</p></div>`; };
   const recent = (d.past || []).slice(-7).map((p) => `${dowOf(p.date)} ${SYM[dayStatus(p, today, a).s] || '·'}`).join('  ');
   const vn = volumeNote(days.slice(0, 7), a);
   const tog = `<div class="row" role="group" aria-label="Plan length" style="margin-bottom:8px">${[['week', 'Next 7 days'], ['goal', 'Until goal date']].map(([k, l]) => `<button class="chip" data-span="${k}" aria-pressed="${(long ? 'goal' : 'week') === k}">${l}</button>`).join('')}</div>`;
   let more = '';
-  for (let k = 7; k < days.length; k += 7) { const ch = days.slice(k, k + 7), km = r1(ch.reduce((s, x) => s + (RUNKINDS.includes(x.kind) ? x.km || 0 : 0), 0)); more += `<details class="fold"><summary>${esc(shortDate(ch[0].date))} to ${esc(shortDate(ch[ch.length - 1].date))}${km ? ` · ${km} km` : ''}</summary><div class="week">${ch.map(cardOf).join('')}</div></details>`; }
+  for (let k = 7; k < days.length; k += 7) { const ch = days.slice(k, k + 7), km = r1(ch.reduce((s, x) => s + (RUNKINDS.includes(x.kind) ? x.km || 0 : 0), 0)); more += `<details class="fold"><summary>${esc(shortDate(ch[0].date))} to ${esc(shortDate(ch[ch.length - 1].date))}${km ? ` · ${esc(fmtKm(km))}` : ''}</summary><div class="week">${ch.map(cardOf).join('')}</div></details>`; }
   const spanNote = long ? `<p class="sm mute" style="margin:0">${L} days, up to your goal on ${esc(dayLabel(profile.date))}.${d.week.some((x) => x.auto) ? ' Days marked outline are a simple placeholder until the coach plans them.' : ''}</p>` : '';
   $('#weekbox').innerHTML = tog + fold(long ? 'Plan until goal date' : 'Next 7 days', `${spanNote}${recent ? `<p class="sm mute" style="margin:0">Recent: ${esc(recent)}</p>` : ''}${vn.volume ? `<p class="sm mute" style="margin:0">${esc(vn.volume)}</p>` : ''}<div class="week">${days.slice(0, 7).map(cardOf).join('')}</div>${more}`);
   const extra = [d.watch_out && `<b class="d c-berry">Watch out: </b>${esc(d.watch_out)}`, d.stale && '<span class="sm">This plan is running low. Tap Ask coach for a fresh one.</span>',
@@ -1037,7 +1076,7 @@ const download = (fmt) => {
 $('#xcsv').onclick = () => download('csv'); $('#xjson').onclick = () => download('json');
 $('#add').addEventListener('submit', (e) => {
   e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
-  const w = normalize({ date: f.date, type: f.type, title: f.title, distance: f.km, time: parseDuration(f.mins), hr: f.hr, elev: f.elev });
+  const w = normalize({ date: f.date, type: f.type, title: f.title, distance: toKm(+f.km || 0), time: parseDuration(f.mins), hr: f.hr, elev: f.elev });
   if (!w) return msg('Pick a valid date.');
   const isNew = !ws.some((x) => x.id === w.id); ws = mergeWorkouts(ws, [w]).list; save(); e.target.reset(); $('#add [name=date]').value = todayStr(); renderDash(); msg('Workout logged.'); burst($('#add')); if (isNew) reconcile([w.id]);
 });
@@ -1298,7 +1337,7 @@ const kindOf = (k) => { k = S(k).toLowerCase().trim(); return KINDS.includes(k) 
 const guessKind = (p) => (/rest/i.test(p) ? 'rest' : /interval|repeat|fartlek/i.test(p) ? 'intervals' : /tempo|threshold/i.test(p) ? 'tempo' : /long run/i.test(p) ? 'long run' : /cross|bike|cycl|swim|gym|strength/i.test(p) ? 'cross-train' : /recover|walk|mobil|stretch/i.test(p) ? 'active recovery' : 'easy run');
 const setDay = (days, i, patch) => { days[i] = { date: days[i].date, day: days[i].day, ...patch }; };
 const safePick = (a) => (a.severe ? 'rest' : ['easy run', 'active recovery', 'cross-train', 'rest'].find((k) => a.allowed.includes(k)) || 'rest');
-const brief = (acts) => acts.map((w) => `${w.type}${w.km ? ' ' + w.km + ' km' : ''} ${fmtDur(w.sec)}`).join(' + ');
+const brief = (acts) => acts.map((w) => `${w.type}${w.km ? ' ' + fmtKm(w.km) : ''} ${fmtDur(w.sec)}`).join(' + ');
 const SYM = { done: '✓', changed: '~', missed: '✗' };
 const autoAI = () => profile.mode !== 'keep';   // Keep mode: no background contact with Groq
 const planNote = (t) => { const m = $('#planmsg'); m.textContent = t; m.hidden = !t; };
@@ -1331,9 +1370,9 @@ function volumeNote(days, a) {
   const runKind = (k) => RUNKINDS.includes(k), warns = [];
   const sum = r1(days.filter((x) => runKind(x.kind)).reduce((s, x) => s + (x.km || 0), 0));
   let volume = '';
-  if (a.target) { volume = `Suggested running for the next 7 days: ${a.target.min}-${a.target.max} km (${a.target.basis}).${sum ? ` This plan: ${sum} km.` : ''}`; if (sum > a.target.max * 1.15) warns.push(`The planned ${sum} km is above the suggested range. Trim the longest runs if it feels like too much.`); }
+  if (a.target) { volume = `Suggested running for the next 7 days: ${fmtKmRange(a.target.min, a.target.max)} (${a.target.basis}).${sum ? ` This plan: ${fmtKm(sum)}.` : ''}`; if (sum > a.target.max * 1.15) warns.push(`The planned ${fmtKm(sum)} is above the suggested range. Trim the longest runs if it feels like too much.`); }
   const longest = Math.max(0, ...days.map((x) => (runKind(x.kind) ? x.km || 0 : 0)));
-  if (a.longCap && longest > a.longCap * 1.05) warns.push(`The longest planned run (${longest} km) is above the suggested limit of ${a.longCap} km. Shorten it.`);
+  if (a.longCap && longest > a.longCap * 1.05) warns.push(`The longest planned run (${fmtKm(longest)}) is above the suggested limit of ${fmtKm(a.longCap)}. Shorten it.`);
   return { volume, warns };
 }
 
@@ -1376,11 +1415,12 @@ function todayDetail(item, a) {
   const g = a.facts.paces.pace_guide, pp = a.facts.paces.run_pace_percentiles_per_km, km = item.km, sp = (x) => parsePace(x) || 0;
   const easyMid = g ? (sp(g.easy_per_km.split('-')[0]) + sp(g.easy_per_km.split('-')[1])) / 2 : pp ? sp(pp.typical_p50) * 1.1 : 360;
   const dur = km && easyMid ? `about ${Math.round((km * easyMid) / 60)} min` : '30-40 min';
+  const kmTxt = km ? fmtKm(km) : '', per = unitLabel();
   const T = {
-    'easy run': { title: 'Easy run', plan: `5 minutes of walking or very easy jogging.\n${km ? km + ' km' : '25-35 minutes'} of relaxed, conversational running.\n5 minutes of walking and light stretching.`, target: g ? `${g.easy_per_km} per km, effort 3-4/10` : 'Effort 3-4/10, conversational', duration: dur },
-    'tempo': { title: 'Tempo run', plan: '10 minutes of easy running to warm up.\n15-20 minutes at a comfortably hard pace: a few words, not a chat.\n10 minutes of easy running to cool down.', target: g ? `${g.tempo_per_km} per km, effort 6-7/10` : 'Effort 6-7/10', duration: '40-50 min' },
-    'intervals': { title: 'Intervals', plan: '10 minutes of easy running to warm up.\n5 x 2 minutes fast with 2 minutes of easy jogging between.\n10 minutes of easy running to cool down.', target: g ? `${g.intervals_per_km} per km on the fast parts, effort 8/10` : 'Fast parts at effort 8/10', duration: '40-45 min' },
-    'long run': { title: 'Long run', plan: `Start very easy.\n${km ? km + ' km' : 'A little longer than your usual run'} at a steady, relaxed pace. Take water if it is warm.\nWalk for 5 minutes to finish.`, target: g ? `${g.long_run_per_km} per km, effort 3-5/10` : 'Effort 3-5/10', duration: km && easyMid ? `about ${Math.round((km * easyMid) / 60)} min` : '50-70 min' },
+    'easy run': { title: 'Easy run', plan: `5 minutes of walking or very easy jogging.\n${km ? kmTxt : '25-35 minutes'} of relaxed, conversational running.\n5 minutes of walking and light stretching.`, target: g ? `${paceBand(g.easy_per_km)} per ${per}, effort 3-4/10` : 'Effort 3-4/10, conversational', duration: dur },
+    'tempo': { title: 'Tempo run', plan: '10 minutes of easy running to warm up.\n15-20 minutes at a comfortably hard pace: a few words, not a chat.\n10 minutes of easy running to cool down.', target: g ? `${paceBand(g.tempo_per_km)} per ${per}, effort 6-7/10` : 'Effort 6-7/10', duration: '40-50 min' },
+    'intervals': { title: 'Intervals', plan: '10 minutes of easy running to warm up.\n5 x 2 minutes fast with 2 minutes of easy jogging between.\n10 minutes of easy running to cool down.', target: g ? `${paceBand(g.intervals_per_km)} per ${per} on the fast parts, effort 8/10` : 'Fast parts at effort 8/10', duration: '40-45 min' },
+    'long run': { title: 'Long run', plan: `Start very easy.\n${km ? kmTxt : 'A little longer than your usual run'} at a steady, relaxed pace. Take water if it is warm.\nWalk for 5 minutes to finish.`, target: g ? `${paceBand(g.long_run_per_km)} per ${per}, effort 3-5/10` : 'Effort 3-5/10', duration: km && easyMid ? `about ${Math.round((km * easyMid) / 60)} min` : '50-70 min' },
   };
   const base = T[item.kind] || SAFE[item.kind] || SAFE.rest;
   return { ...base, kind: item.kind, distance_km: km || null, why: item.plan || '', swap_if_worse: base.swap_if_worse || 'Cut it short or swap for a walk if you feel off.' };
@@ -1618,7 +1658,7 @@ function askUpdates(oldD, newD) {
 
 function updateCard(u, a, today) {
   const rel = (date) => (date === today ? 'Today' : date === addDays(today, 1) ? 'Tomorrow' : dayLabel(date));
-  const desc = (x) => (x ? `${cap1(x.kind)}${x.km ? ' ' + x.km + ' km' : ''}` : 'Nothing');
+  const desc = (x) => (x ? `${cap1(x.kind)}${x.km ? ' ' + fmtKm(x.km) : ''}` : 'Nothing');
   const lines = (u.items || []).map((it) => `<div class="uline"><b>${esc(rel(it.date))}:</b> ${it.from ? esc(desc(it.from)) : '<span class="mute">New day</span>'} <span class="arrow" aria-label="changed to">→</span> ${esc(desc(it.to))}</div>`).join('');
   const st = STAT[u.status] || STAT.info, statText = u.src === 'safety' && u.status === 'applied' ? 'Safety change' : u.src === 'added' ? 'New day added' : st[0];
   const btn = (act, text, cls) => `<button class="btn ${cls}" data-act="${act}" data-uid="${esc(u.id)}">${text}</button>`;
@@ -1830,6 +1870,11 @@ function calcProgress(list, today, prof, plan) {
     const i = 11 - k, inB = (w) => ago(w) >= i * 7 && ago(w) < i * 7 + 7, gl = good.filter((w) => inB(w) && w.km >= 3);
     return { km: r1(runs.filter(inB).reduce((s, w) => s + w.km, 0)), est5k: gl.length ? Math.min(...gl.map((w) => eq(w, 5))) : null, sessions: list.filter(inB).length };
   });
+  const paceWeeks = Array.from({ length: 12 }, (_, k) => {
+    const i = 11 - k, inB = (w) => ago(w) >= i * 7 && ago(w) < i * 7 + 7, gl = good.filter(inB), km = gl.reduce((s, w) => s + w.km, 0);
+    return km > 0 ? gl.reduce((s, w) => s + w.sec, 0) / km : null;
+  });
+  const paceIn = (a, b) => { const gl = good.filter((w) => ago(w) >= a && ago(w) < b), km = gl.reduce((s, w) => s + w.km, 0); return km > 0 ? gl.reduce((s, w) => s + w.sec, 0) / km : null; };
   const pb = (D) => { let b = null; for (const w of good) if (w.km >= D && w.km <= D * 1.35) { const s = eq(w, D); if (!b || s < b.s) b = { s, date: w.date, km: w.km }; } return b; };
   const pbs = [3, 5, 10].map((D) => ({ D, b: pb(D) }));
   const longest = runs.reduce((b, w) => (!b || w.km > b.km ? w : b), null);
@@ -1847,13 +1892,13 @@ function calcProgress(list, today, prof, plan) {
     adherence = { total: st.length, done: st.filter((s) => s === 'done').length };
   }
   const goalN = getGoal();
-  return { weeks, pbs, longest, bestWeek, totals, est, goal, adherence, goalN, active: weeks.filter((w) => w.sessions >= goalN).length };
+  return { weeks, paceWeeks, paceNow: paceIn(0, 42), paceThen: paceIn(42, 84), pbs, longest, bestWeek, totals, est, goal, adherence, goalN, active: weeks.filter((w) => w.sessions >= goalN).length };
 }
-function trendSvg(vals) {   // lower time = faster, drawn higher up
+function trendSvg(vals, label) {   // lower time or pace = faster, drawn higher up
   const pts = vals.map((v, i) => [i, v]).filter((p) => p[1] != null), W = 300, H = 120, pad = 12;
   const lo = Math.min(...pts.map((p) => p[1])), span = Math.max(...pts.map((p) => p[1])) - lo || 1;
   const X = (i) => Math.round(pad + i * ((W - 2 * pad) / (vals.length - 1))), Y = (v) => Math.round(pad + ((v - lo) / span) * (H - 2 * pad));
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Estimated 5K time over the last 12 weeks, higher on the chart is faster" shape-rendering="crispEdges"><polyline points="${pts.map((p) => `${X(p[0])},${Y(p[1])}`).join(' ')}" fill="none" stroke="${COL().line}" stroke-width="3"/>${pts.map((p) => `<rect x="${X(p[0]) - 4}" y="${Y(p[1]) - 4}" width="8" height="8" fill="${COL().dot}" stroke="${COL().dotEdge}" stroke-width="2"/>`).join('')}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label || 'Estimated 5K time over the last 12 weeks, higher on the chart is faster')}" shape-rendering="crispEdges"><polyline points="${pts.map((p) => `${X(p[0])},${Y(p[1])}`).join(' ')}" fill="none" stroke="${COL().line}" stroke-width="3"/>${pts.map((p) => `<rect x="${X(p[0]) - 4}" y="${Y(p[1]) - 4}" width="8" height="8" fill="${COL().dot}" stroke="${COL().dotEdge}" stroke-width="2"/>`).join('')}</svg>`;
 }
 function renderProgress() {
   const el = $('#prog');
@@ -1861,15 +1906,18 @@ function renderProgress() {
   const today = todayStr(), P = calcProgress(ws, today, profile, coachLast && coachLast.data), T = (s) => (s == null ? '–' : fmtDur(s));
   const pts = P.weeks.map((w) => w.est5k), chart = pts.filter((v) => v != null).length >= 2 ? trendSvg(pts) : '';
   const delta = P.est.now != null && P.est.then != null ? Math.round(P.est.then - P.est.now) : null;
-  const trend = P.est.now == null ? 'Run 3 km or more to start your estimated 5K.' : `Now about ${T(P.est.now)}${delta === null ? '.' : delta > 0 ? `, ${delta}s faster than the 6 weeks before.` : delta < 0 ? `, ${-delta}s slower than the 6 weeks before.` : ', about the same as the 6 weeks before.'}`;
+  const trend = P.est.now == null ? `Run ${fmtKm(3)} or more to start your estimated 5K.` : `Now about ${T(P.est.now)}${delta === null ? '.' : delta > 0 ? `, ${delta}s faster than the 6 weeks before.` : delta < 0 ? `, ${-delta}s slower than the 6 weeks before.` : ', about the same as the 6 weeks before.'}`;
+  const ppts = P.paceWeeks, pchart = ppts.filter((v) => v != null).length >= 2 ? trendSvg(ppts, 'Average run pace over the last 12 weeks, higher on the chart is faster') : '';
+  const pdelta = P.paceNow != null && P.paceThen != null ? Math.round((P.paceThen - P.paceNow) * (uMi() ? MI : 1)) : null;
+  const ptrend = P.paceNow == null ? 'Log a few runs with a distance and time to see your average pace trend.' : `Now about ${fmtPaceUnit(P.paceNow)}${paceUnit()}${pdelta === null ? '.' : pdelta > 0 ? `, ${pdelta}s${paceUnit()} faster than the 6 weeks before.` : pdelta < 0 ? `, ${-pdelta}s${paceUnit()} slower than the 6 weeks before.` : ', about the same as the 6 weeks before.'}`;
   let goal = '';
   if (profile.goal) {
     const g = P.goal, dtg = profile.date ? dn(profile.date) - dn(today) : null, left = dtg === null ? '' : dtg < 0 ? ' Goal date has passed.' : dtg === 0 ? ' Goal day is today.' : ` ${dtg} days to go.`;
-    if (g && g.now) { const pct = Math.min(100, Math.round((g.sec / g.now) * 100)); goal = `<section class="px stack"><h2>Goal</h2><p style="margin:0">${esc(profile.goal)}</p><div class="meter" role="img" aria-label="${pct} percent of the way to your goal"><i style="width:${pct}%"></i></div><p class="sm mute" style="margin:0">Now about ${T(g.now)} for ${esc(g.D)} km, goal ${T(g.sec)}.${left}</p></section>`; }
+    if (g && g.now) { const pct = Math.min(100, Math.round((g.sec / g.now) * 100)); goal = `<section class="px stack"><h2>Goal</h2><p style="margin:0">${esc(profile.goal)}</p><div class="meter" role="img" aria-label="${pct} percent of the way to your goal"><i style="width:${pct}%"></i></div><p class="sm mute" style="margin:0">Now about ${T(g.now)} for ${esc(fmtKm(g.D))}, goal ${T(g.sec)}.${left}</p></section>`; }
     else goal = `<section class="px stack"><h2>Goal</h2><p style="margin:0">${esc(profile.goal)}</p><p class="sm mute" style="margin:0">${g ? 'Not enough recent runs of this length to estimate your time yet.' : 'Add a time like 25:00 and a distance like 5K to your goal to track it here.'}${left}</p></section>`;
   }
-  const pbRow = (D) => { const b = P.pbs.find((x) => x.D === D).b; return b ? `<dt>Best ${D}K</dt><dd>${T(b.s)} <span class="mute xs">${esc(b.date)}${Math.abs(b.km - D) > 0.3 ? `, from a ${esc(b.km)} km run` : ''}</span></dd>` : `<dt>Best ${D}K</dt><dd class="mute">Not yet</dd>`; };
-  el.innerHTML = `<section class="px stack"><h2>Estimated 5K</h2>${chart}<p class="sm mute" style="margin:0">${esc(trend)} Based on your best run of 3 km or more each week.</p></section>${goal}<section class="px stack"><h2>Personal bests</h2><dl>${pbRow(3)}${pbRow(5)}${pbRow(10)}<dt>Longest run</dt><dd>${P.longest ? `${esc(P.longest.km)} km <span class="mute xs">${esc(P.longest.date)}</span>` : '–'}</dd><dt>Biggest week</dt><dd>${P.bestWeek ? `${esc(P.bestWeek.km)} km <span class="mute xs">week of ${esc(P.bestWeek.start)}</span>` : '–'}</dd></dl><p class="sm mute" style="margin:0">Bests are scaled from your runs of about that distance, so they are estimates.</p></section><section class="px stack"><h2>Totals and consistency</h2><dl><dt>This month</dt><dd>${P.totals.month} km</dd><dt>This year</dt><dd>${P.totals.year} km</dd><dt>All time</dt><dd>${P.totals.all} km in ${P.totals.runs} runs</dd><dt>Active weeks</dt><dd>${P.active} of the last 12 <span class="mute xs">(${P.goalN}+ workouts a week)</span></dd>${P.adherence && P.adherence.total ? `<dt>Plan followed</dt><dd>${P.adherence.done} of ${P.adherence.total} days <span class="mute xs">(last 2 weeks)</span></dd>` : ''}</dl></section>`;
+  const pbRow = (D) => { const b = P.pbs.find((x) => x.D === D).b; return b ? `<dt>Best ${D}K</dt><dd>${T(b.s)} <span class="mute xs">${esc(b.date)}${Math.abs(b.km - D) > 0.3 ? `, from a ${esc(fmtKm(b.km))} run` : ''}</span></dd>` : `<dt>Best ${D}K</dt><dd class="mute">Not yet</dd>`; };
+  el.innerHTML = `<section class="px stack"><h2>Estimated 5K</h2>${chart}<p class="sm mute" style="margin:0">${esc(trend)} Based on your best run of ${esc(fmtKm(3))} or more each week.</p></section>${goal}<section class="px stack"><h2>Average pace</h2>${pchart}<p class="sm mute" style="margin:0">${esc(ptrend)}</p></section><section class="px stack"><h2>Personal bests</h2><dl>${pbRow(3)}${pbRow(5)}${pbRow(10)}<dt>Longest run</dt><dd>${P.longest ? `${esc(fmtKm(P.longest.km))} <span class="mute xs">${esc(P.longest.date)}</span>` : '–'}</dd><dt>Biggest week</dt><dd>${P.bestWeek ? `${esc(fmtKm(P.bestWeek.km))} <span class="mute xs">week of ${esc(P.bestWeek.start)}</span>` : '–'}</dd></dl><p class="sm mute" style="margin:0">Bests are scaled from your runs of about that distance, so they are estimates.</p></section><section class="px stack"><h2>Totals and consistency</h2><dl><dt>This month</dt><dd>${fmtKm(P.totals.month)}</dd><dt>This year</dt><dd>${fmtKm(P.totals.year)}</dd><dt>All time</dt><dd>${fmtKm(P.totals.all)} in ${P.totals.runs} runs</dd><dt>Active weeks</dt><dd>${P.active} of the last 12 <span class="mute xs">(${P.goalN}+ workouts a week)</span></dd>${P.adherence && P.adherence.total ? `<dt>Plan followed</dt><dd>${P.adherence.done} of ${P.adherence.total} days <span class="mute xs">(last 2 weeks)</span></dd>` : ''}</dl></section>`;
 }
 
 /* ---------- weekly recap card ---------- */
@@ -1906,7 +1954,7 @@ function weekRecap(list, today, sel, plan, prof) {
   const streak = summarize(list, today).current_weekly_streak_weeks;
   let best;
   if (pbs.length) { const p = pbs[pbs.length - 1]; best = `New ${p.D}K best: about ${fmtDur(p.s)}.`; }
-  else if (longest && longest.km > 0) best = `Longest run: ${longest.km} km on ${dowOf(longest.date)}.`;
+  else if (longest && longest.km > 0) best = `Longest run: ${fmtKm(longest.km)} on ${dowOf(longest.date)}.`;
   else if (acts.length) best = `You showed up ${acts.length} time${acts.length === 1 ? '' : 's'}.`;
   else best = 'A rest week. Rest counts as training too.';
   let focus;
@@ -1920,10 +1968,10 @@ function weekRecap(list, today, sel, plan, prof) {
 }
 function recapStats(R) {
   return [
-    ['Run distance', `${R.km} km`, R.delta === null ? '' : `${R.delta > 0 ? '+' : ''}${R.delta}% vs week before`],
+    ['Run distance', fmtKm(R.km), R.delta === null ? '' : `${R.delta > 0 ? '+' : ''}${R.delta}% vs week before`],
     ['Runs', String(R.runs), `${R.sessions} workout${R.sessions === 1 ? '' : 's'} in all`],
     ['Active time', fmtMins(R.mins), ''],
-    ['Avg run pace', R.pace ? `${fmtPace(R.pace)}/km` : '–', R.fastest ? `fastest ${fmtPace(R.fastest.pace)}/km` : ''],
+    ['Avg run pace', R.pace ? `${fmtPaceUnit(R.pace)}${paceUnit()}` : '–', R.fastest ? `fastest ${fmtPaceUnit(R.fastest.pace)}${paceUnit()}` : ''],
     ['Plan followed', R.adh ? `${R.adh.done}/${R.adh.total}` : '–', R.adh ? 'planned days' : 'no plan data'],
     ['Weekly streak', `${R.streak} wk`, `goal ${R.goalN}+ a week`],
   ];
@@ -1934,13 +1982,13 @@ function renderRecap() {
   const today = todayStr(), sel = recapSel || (dowOf(today) === 'Sun' ? 'this' : 'last');
   const R = recapLast = weekRecap(ws, today, sel, coachLast && coachLast.data, profile);
   const stats = recapStats(R).map(([l, v, s]) => `<div class="rstat"><div class="mute xs">${esc(l)}</div><div class="big">${esc(v)}</div>${s ? `<div class="mute xs">${esc(s)}</div>` : ''}</div>`).join('');
-  const mx = Math.max(1, ...R.days), L = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const bars = R.days.map((v) => `<i title="${v} min" style="height:${v ? Math.max(8, v / mx * 100) : 4}%;background:${v ? COL().hi : COL().empty}"></i>`).join('');
+  const mx = Math.max(1, ...R.days), L = ['M', 'T', 'W', 'T', 'F', 'S', 'S'], LD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const bars = R.days.map((v, i) => `<i role="button" tabindex="0" data-i="${i}" data-label="${LD[i]}" data-v="${v} min" aria-label="${LD[i]}: ${v} minutes" title="${v} min" style="height:${v ? Math.max(8, v / mx * 100) : 4}%;background:${v ? COL().hi : COL().empty}"></i>`).join('');
   const chip = (v, l) => `<button class="chip" data-rw="${v}" aria-pressed="${sel === v}">${l}</button>`;
   el.innerHTML = `<div class="row between"><h2>Weekly recap</h2><div class="row">${chip('last', 'Last week')}${chip('this', 'This week')}</div></div>`
-    + `<div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start"><div style="line-height:0">${coachArt(3)}</div><div><div class="d c-sky">${esc(shortDate(R.start))} to ${esc(shortDate(R.end))}${R.partial ? ' (so far)' : ''}</div><div class="big c-mint" style="margin-top:4px">${esc(R.km)} km</div><div class="sm mute">${R.runs} run${R.runs === 1 ? '' : 's'}, ${R.sessions} workout${R.sessions === 1 ? '' : 's'}</div></div></div>`
+    + `<div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start"><div style="line-height:0">${coachArt(3)}</div><div><div class="d c-sky">${esc(shortDate(R.start))} to ${esc(shortDate(R.end))}${R.partial ? ' (so far)' : ''}</div><div class="big c-mint" style="margin-top:4px">${esc(fmtKm(R.km))}</div><div class="sm mute">${R.runs} run${R.runs === 1 ? '' : 's'}, ${R.sessions} workout${R.sessions === 1 ? '' : 's'}</div></div></div>`
     + `<div class="recap-grid">${stats}</div>`
-    + `<div><div class="mute sm" style="margin-bottom:6px">Active minutes per day</div><div class="bars" style="height:80px" role="img" aria-label="Active minutes per day, Monday to Sunday: ${R.days.join(', ')}">${bars}</div><div class="dlabels mute xs">${L.map((x) => `<span>${x}</span>`).join('')}</div></div>`
+    + `<div><div class="mute sm" style="margin-bottom:6px">Active minutes per day</div><div class="bars" style="height:80px" role="group" aria-label="Active minutes per day, Monday to Sunday: ${R.days.join(', ')}">${bars}</div><div class="dlabels mute xs">${L.map((x) => `<span>${x}</span>`).join('')}</div><p id="recbarval" class="sm mute" role="status" aria-live="polite" style="margin:6px 0 0">Tap a bar to see that day's active minutes.</p></div>`
     + `<p class="sm" style="margin:0"><b class="d c-peach">Best moment: </b>${esc(R.best)}</p><p class="sm" style="margin:0"><b class="d c-berry">Next focus: </b>${esc(R.focus)}</p>`
     + `<div class="row"><button class="btn mint" data-rshare="1">Share image</button></div>`;
 }
@@ -1971,7 +2019,7 @@ async function recapImage(R) {
   text(`${shortDate(R.start)} to ${shortDate(R.end)}${R.partial ? ' (so far)' : ''}`, 60, 138, 26, K.mute, B, 400);
   if (cl) { try { const cw = 150; g.drawImage(await svgImage(drawnCoach(lookClean, cw)), 524, 36, cw, Math.round(cw * coachRatio(lookClean))); } catch {} }
   else { const grid = coachGrid(look), sc = 6; grid.forEach((row, y) => [...row].forEach((ch, x) => { if (PAL[ch]) rect(530 + x * sc, 56 + y * sc, sc, sc, PAL[ch]); })); }
-  text(`${R.km} km`, 60, 228, 80, K.big);
+  text(fmtKm(R.km), 60, 228, 80, K.big);
   text(`${R.runs} run${R.runs === 1 ? '' : 's'}, ${R.sessions} workout${R.sessions === 1 ? '' : 's'}`, 60, 272, 28, K.text, B, 400);
   recapStats(R).forEach(([l, v, s], i) => {
     const x = 60 + (i % 3) * 210, y = 300 + Math.floor(i / 3) * 102, e = cl ? 2 : 4;
@@ -2002,9 +2050,22 @@ async function shareRecap() {
   } catch { msg('Could not make the image. Try again.'); }
   finally { const b2 = $('#recap [data-rshare]'); if (b2) b2.disabled = false; }
 }
+function pickRecBar(el) {
+  if (!el) return;
+  const box = el.closest('.bars'); if (!box) return;
+  box.querySelectorAll('i[data-i]').forEach((b) => b.classList.toggle('sel', b === el));
+  const t = $('#recbarval'); if (t) t.textContent = `${el.dataset.label}: ${el.dataset.v}`;
+}
 $('#recap').onclick = (e) => {
   const c = e.target.closest('[data-rw]'); if (c) { recapSel = c.dataset.rw; setPref('recap', recapSel); renderRecap(); return; }
-  if (e.target.closest('[data-rshare]')) shareRecap();
+  if (e.target.closest('[data-rshare]')) { shareRecap(); return; }
+  const box = e.target.closest('#recap .bars');
+  if (box) pickRecBar(e.target.closest('#recap .bars i[data-i]') || nearestBar(box, e.clientX));
+};
+$('#recap').onkeydown = (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('#recap .bars i[data-i]');
+  if (el) { e.preventDefault(); pickRecBar(el); }
 };
 
 /* ---------- tabs ---------- */
