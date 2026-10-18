@@ -1,4 +1,4 @@
-# Pace Pal — AI running coach
+# Emric — AI running coach
 
 A completely free AI running coach logs your runs, builds a training plan around how you
 actually feel, and explains every session in plain language. Everything lives in one static
@@ -6,7 +6,7 @@ actually feel, and explains every session in plain language. Everything lives in
 
 ## Run it
 
-itsrelyt.github.io/PacePal/
+itsrelyt.github.io/Emric/
 
 ## Features
 
