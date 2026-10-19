@@ -301,6 +301,17 @@ html:not(.clean) .legalbox{border-color:#4a4670}
 .legalbox p,.legalbox li{margin:4px 0}
 .legalbox ul{margin:4px 0 4px 18px;padding:0}
 @media (min-width:760px){#legalmodal .gatebox{width:min(720px,94vw)}}
+/* footer legal links */
+#footrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+#footrow .chip{text-transform:none;font-weight:600}
+/* persistent legal access: shown only while the sign-in gate covers the app (footer holds the links once ungated) */
+#legalfloat{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:150;display:none;gap:8px;flex-wrap:wrap}
+html.gated #legalfloat{display:flex}
+#legalfloat .chip{background:var(--panel,#fff);box-shadow:0 2px 10px rgba(0,0,0,.25)}
+/* cookie consent banner */
+#ckbanner{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:140;max-width:520px;margin-inline:auto}
+#ckbanner .gatebox{padding:14px 16px;background:var(--panel);border:2px solid var(--ink);color:var(--text)}
+html.clean #ckbanner .gatebox{background:#fff;border-color:#111;color:#111}
 </style>
 </head>
 <body>
@@ -321,6 +332,7 @@ html:not(.clean) .legalbox{border-color:#4a4670}
         <button class="btn sky" id="gtoggle">Create account instead</button>
       </div>
       <div class="row"><button class="chip" id="gforgot" type="button">Forgot password?</button><button class="chip" id="gresend" type="button" hidden>Resend confirmation email</button></div>
+      <div class="row"><button class="chip" id="glegalbtn" type="button" aria-haspopup="dialog">Read the Terms of Service &amp; Privacy Policy</button></div>
       <p id="gerr" class="c-berry sm" role="alert" hidden></p>
       <p id="gok" class="c-mint sm" role="status" hidden></p>
     </div>
@@ -383,6 +395,21 @@ html:not(.clean) .legalbox{border-color:#4a4670}
     <div class="row"><button class="btn mint" id="legalok" type="button">Got it</button></div>
   </div>
 </div>
+<div id="legalfloat" aria-label="Legal links">
+  <button class="chip" id="floatlegalbtn" type="button" aria-haspopup="dialog">Terms &amp; Privacy</button>
+  <button class="chip" id="floatcookiebtn" type="button">Cookies</button>
+</div>
+<div id="ckbanner" role="dialog" aria-modal="false" aria-labelledby="cktitle" hidden>
+  <div class="px stack gatebox">
+    <h2 id="cktitle" style="margin:0;font-size:1rem">We value your privacy</h2>
+    <p class="sm" style="margin:0">Emric uses essential cookies to make the app work, plus optional analytics and advertising cookies (including Google AdSense) to improve the service and show relevant ads. See our <button class="chip" id="cklink" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button> for details.</p>
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn mint" id="ckaccept" type="button">Accept all</button>
+      <button class="btn" id="ckessential" type="button">Essential only</button>
+    </div>
+    <p class="mute xs" style="margin:0">You can change this choice any time from Settings or the "Cookie preferences" link at the bottom of the page.</p>
+  </div>
+</div>
 <main>
   <header class="row between">
     <div class="row" style="flex-wrap:nowrap;gap:12px"><h1 id="logo"></h1><button class="sdot" id="syncpill" type="button" data-s="off" aria-label="Not synced. Sign in to sync." title="Not synced. Sign in to sync."></button></div>
@@ -420,6 +447,7 @@ html:not(.clean) .legalbox{border-color:#4a4670}
         <button class="btn sky" id="authtoggle">Create account instead</button>
       </div>
       <div class="row"><button class="chip" id="authforgot" type="button">Forgot password?</button><button class="chip" id="authresend" type="button" hidden>Resend confirmation email</button></div>
+      <div class="row"><button class="chip" id="authlegalbtn" type="button" aria-haspopup="dialog">Read the Terms of Service &amp; Privacy Policy</button></div>
       <p id="autherr" class="c-berry sm" role="alert" hidden></p>
       <p id="authok" class="c-mint sm" role="status" hidden></p>
     </div>
@@ -494,6 +522,10 @@ html:not(.clean) .legalbox{border-color:#4a4670}
         <button class="btn sky" id="sbtest">Test connection</button>
       </div>
       <p class="sm" style="margin:0"><span class="mute">AI coach key:</span> <b id="keystat" class="mute">Not checked yet</b></p>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <button class="chip" id="setlegalbtn" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button>
+        <button class="chip" id="setcookiebtn" type="button">Cookie preferences</button>
+      </div>
     </div></details>
 
     <div class="row">
@@ -625,6 +657,12 @@ html:not(.clean) .legalbox{border-color:#4a4670}
     </details>
 
   <p id="foot" class="mute sm" style="margin:0">Your log is stored in this browser, and synced to your account when you are signed in. When you ask the coach, only a training analysis, your last 28 days of sessions and your goal settings are sent to Groq (the AI service). Chat messages, the daily refresh and newly logged activities are sent too unless you choose "Keep my plan unless I approve" (then the coach only contacts Groq when you ask). A Strava or Garmin export file you choose is read here and never uploaded. Export regularly to keep a backup.</p>
+  <div id="footrow" class="mute xs">
+    <button class="chip" id="footlegalbtn" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button>
+    <button class="chip" id="footcookielink" type="button">Cookie preferences</button>
+    <a class="mute xs" href="mailto:tyl3rbuch@outlook.com" style="color:inherit;text-decoration:underline">Contact: tyl3rbuch@outlook.com</a>
+    <span>© 2026 Emric (Emric.app) — Tyler Buchanan</span>
+  </div>
 </main>
 
 <script>
@@ -2420,13 +2458,48 @@ function syncGateUI() {
   $('#gresend').hidden = true;
 }
 function openLegalModal() { $('#legalmodal').hidden = false; $('#legalclose').focus(); }
-function closeLegalModal() { $('#legalmodal').hidden = true; $('#gtermslink').focus(); }
+function closeLegalModal() { $('#legalmodal').hidden = true; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
 $('#gtermslink').onclick = openLegalModal;
 $('#authtermslink').onclick = openLegalModal;
+$('#glegalbtn').onclick = openLegalModal;
+$('#authlegalbtn').onclick = openLegalModal;
+$('#cklink').onclick = openLegalModal;
+$('#footlegalbtn').onclick = openLegalModal;
+$('#setlegalbtn').onclick = openLegalModal;
+$('#floatlegalbtn').onclick = openLegalModal;
+$('#floatcookiebtn').onclick = openCookiePrefs;
+try { document.documentElement.classList.add('hasfootlegal'); } catch {}
 $('#legalclose').onclick = closeLegalModal;
 $('#legalok').onclick = closeLegalModal;
 $('#legalmodal').addEventListener('click', (e) => { if (e.target === $('#legalmodal')) closeLegalModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#legalmodal').hidden) closeLegalModal(); });
+
+/* ---------- cookie consent banner: essential always on, analytics/ads optional ---------- */
+const CK_VER = '2026-10-19';
+const ckGet = () => { try { return JSON.parse(lsGet('emric.cookieconsent', 'null')); } catch { return null; } };
+let ckPrefs = ckGet();
+function ckApply(p) {
+  ckPrefs = { ...p, version: CK_VER, at: new Date().toISOString() };
+  lsSet('emric.cookieconsent', JSON.stringify(ckPrefs));
+  try { localStorage.setItem('cookie_consent', ckPrefs.analytics || ckPrefs.ads ? 'true' : 'false'); } catch {}
+  $('#ckbanner').hidden = true;
+}
+function ckShowBanner() { $('#ckbanner').hidden = false; $('#ckaccept').focus(); }
+$('#ckaccept').onclick = () => { ckApply({ essential: true, analytics: true, ads: true }); msg('Cookie preferences saved: analytics and advertising cookies enabled. You can change this any time under "Cookie preferences".'); };
+$('#ckessential').onclick = () => { ckApply({ essential: true, analytics: false, ads: false }); msg('Cookie preferences saved: only essential cookies are used. You can change this any time under "Cookie preferences".'); };
+function openCookiePrefs() {
+  const p = ckPrefs;
+  if (!p) return ckShowBanner();
+  const all = !!(p.analytics && p.ads);
+  $('#ckbanner').hidden = false;
+  $('#cktitle').textContent = 'Cookie preferences';
+  $('#ckaccept').textContent = all ? 'Update: accept all' : 'Accept all';
+  $('#ckessential').textContent = (!p.analytics && !p.ads) ? 'Update: essential only' : 'Essential only';
+  $('#ckaccept').focus();
+}
+$('#footcookielink').onclick = openCookiePrefs;
+$('#setcookiebtn').onclick = openCookiePrefs;
+if (!ckPrefs) ckShowBanner();
 $('#gtoggle').onclick = () => { gateMode = gateMode === 'signin' ? 'signup' : 'signin'; syncGateUI(); $('#gerr').hidden = true; $('#gok').hidden = true; };
 $('#gpasseye').onclick = () => { const p = $('#gpass'), show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#gpasseye').textContent = show ? 'Hide' : 'Show'; $('#gpasseye').setAttribute('aria-pressed', String(show)); };
 $('#gforgot').onclick = async () => {
