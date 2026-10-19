@@ -298,6 +298,15 @@ html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
 html:not(.clean) #gate,html:not(.clean) #legalmodal,html:not(.clean) #editmodal{background:rgba(20,18,40,.72)}
 .gatebox{width:min(430px,100%);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 html:not(.clean) .gatebox{box-shadow:0 12px 40px rgba(0,0,0,.45)}
+/* edit-workout modal: clean labelled two-column form */
+#editmodal .gatebox{width:min(560px,100%)}
+#editform{display:grid;gap:10px 12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+#editform label.stack.sm{gap:4px;font:600 .8125rem var(--disp);color:var(--mute)}
+html.clean #editform label.stack.sm{color:#444}
+#editform .wide{grid-column:1/-1}
+#editsavebar{justify-content:flex-end}
+#editmodal .btn{min-width:112px}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){#editform{grid-template-columns:1fr;gap:14px}}
 .legalbox{max-height:45vh;max-height:45dvh;overflow-y:auto;border:1px solid #d8d8de;border-radius:8px;padding:10px 12px;font-size:.78rem;line-height:1.45}
 html:not(.clean) .legalbox{border-color:#4a4670}
 .legalbox h1,.legalbox h2,.legalbox h3{font-size:.9rem;margin:10px 0 4px}
@@ -313,8 +322,12 @@ html.gated #legalfloat{display:flex}
 #legalfloat .chip{background:var(--panel,#fff);box-shadow:0 2px 10px rgba(0,0,0,.25)}
 /* cookie consent banner */
 #ckbanner{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:140;max-width:520px;margin-inline:auto}
+html.d-phone.portrait #ckbanner{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+html.d-phone.portrait.kb #ckbanner{display:none}
 #ckbanner .gatebox{padding:14px 16px;background:var(--panel);border:2px solid var(--ink);color:var(--text)}
 html.clean #ckbanner .gatebox{background:#fff;border-color:#111;color:#111}
+/* keep the bottom of the page clear while the cookie banner is up (footer links stay reachable) */
+body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 </style>
 </head>
 <body>
@@ -415,17 +428,23 @@ html.clean #ckbanner .gatebox{background:#fff;border-color:#111;color:#111}
 </div>
 <div id="editmodal" role="dialog" aria-modal="true" aria-labelledby="edittitle" hidden>
   <div class="px stack gatebox">
-    <div class="row between"><h2 id="edittitle" style="margin:0">Edit workout</h2><button class="del" id="editclose" type="button" aria-label="Close without saving">✕</button></div>
-    <form id="editform">
-      <input class="field" type="date" name="edate" required aria-label="Date">
-      <select class="field" name="etype" aria-label="Type"><option>Run</option><option>Ride</option><option>Walk</option><option>Swim</option><option>Workout</option></select>
-      <input class="field wide" name="etitle" placeholder="Title (e.g. Easy loop)" aria-label="Title">
-      <input class="field" name="ekm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Distance" aria-label="Distance">
-      <input class="field" name="emins" type="text" inputmode="text" pattern="^[\d:.]+$" title="Enter minutes (e.g. 30 or 30.5), MM:SS (e.g. 4:00), or HH:MM:SS (e.g. 1:30:00)" placeholder="Duration (30, 4:00, 1:30:00)" aria-label="Duration. Enter minutes like 30 or 30.5, or use colon format like 4:00 for 4 minutes, or 1:30:00 for 1 hour 30 minutes">
-      <input class="field" name="ehr" type="number" inputmode="numeric" min="30" max="230" placeholder="Avg HR (optional)" aria-label="Average heart rate">
-      <input class="field" name="eelev" type="number" inputmode="numeric" min="0" placeholder="Elevation m (optional)" aria-label="Elevation gain in metres">
-      <textarea class="field wide" name="enotes" rows="2" placeholder="Notes (optional)" aria-label="Notes"></textarea>
-      <div class="wide row" style="flex-wrap:wrap;gap:8px"><button class="btn mint" type="submit">Save changes</button><button class="btn" type="button" id="editcancel">Cancel</button></div>
+    <div class="row between" style="flex-wrap:nowrap">
+      <h2 id="edittitle" style="margin:0;font-size:1.1rem">Edit workout</h2>
+      <button class="del" id="editclose" type="button" aria-label="Close without saving" title="Close">✕</button>
+    </div>
+    <p id="editsub" class="mute sm" style="margin:-6px 0 0">Changes are saved to your log and synced when you're signed in.</p>
+    <form id="editform" novalidate>
+      <label class="stack sm">Date<input class="field" type="date" name="edate" required autocomplete="off"></label>
+      <label class="stack sm">Type<select class="field" name="etype"><option>Run</option><option>Ride</option><option>Walk</option><option>Swim</option><option>Workout</option></select></label>
+      <label class="stack sm wide">Title<input class="field" name="etitle" placeholder="e.g. Easy loop" autocomplete="off"></label>
+      <label class="stack sm">Distance<input class="field" name="ekm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.0"></label>
+      <label class="stack sm">Duration<input class="field" name="emins" type="text" inputmode="text" pattern="^[\d:.]+$" title="Enter minutes (e.g. 30 or 30.5), MM:SS (e.g. 4:00), or HH:MM:SS (e.g. 1:30:00)" placeholder="30, 4:00 or 1:30:00"></label>
+      <label class="stack sm">Avg HR (bpm)<input class="field" name="ehr" type="number" inputmode="numeric" min="30" max="230" placeholder="Optional"></label>
+      <label class="stack sm">Elevation (m)<input class="field" name="eelev" type="number" inputmode="numeric" min="0" placeholder="Optional"></label>
+      <label class="stack sm wide">Notes<textarea class="field" name="enotes" rows="2" placeholder="Optional"></textarea></label>
+      <p class="mute xs wide" style="margin:-4px 0 0">Duration accepts minutes (<code>30</code> or <code>30.5</code>), <code>MM:SS</code> (<code>4:00</code>) or <code>HH:MM:SS</code> (<code>1:30:00</code>). New pace is recalculated from distance and time.</p>
+      <div id="editerr" class="c-berry sm wide" role="alert" hidden></div>
+      <div id="editsavebar" class="wide row" style="flex-wrap:wrap;gap:8px"><button class="btn" type="button" id="editcancel">Cancel</button><button class="btn mint" type="submit">Save changes</button></div>
     </form>
   </div>
 </div>
@@ -1248,20 +1267,30 @@ $('#sortsel').onchange = (e) => { const [k, d] = e.target.value.split(':'); sort
 $('#cards').onclick = (e) => { const ed = e.target.closest('[data-edit]'); if (ed) { openEditor(ed.dataset.edit); return; } const b = e.target.closest('[data-id]'); if (b && confirm('Delete this workout?')) { dead[b.dataset.id] = Date.now(); ws = ws.filter((x) => x.id !== b.dataset.id); save(); renderDash(); } };
 
 /* ---------- edit a logged activity ---------- */
-let editingId = null;
+let editingId = null, lastEdited = null;
 const fmtDurPlain = (s) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60); return h ? `${h}:${pad(m)}:${pad(sec)}` : m ? `${m}:${pad(sec)}` : String(Math.round(s / 60)); };
+const editErr = (t) => { const e = $('#editerr'); if (!e) return; e.textContent = t || ''; e.hidden = !t; };
 function openEditor(id) {
   const w = ws.find((x) => x.id === id); if (!w) return;
   editingId = id;
   const f = $('#editform'), el = (n) => f.elements[n];
+  editErr(''); msg('');
   el('edate').value = w.date || ''; el('etype').value = w.type || 'Run'; el('etitle').value = w.title || '';
   el('ekm').value = w.km ? String(Math.round(convKm(w.km) * 100) / 100) : '';
+  el('ekm').placeholder = `0.0 (${unitLabel()})`;
+  el('ekm').setAttribute('aria-label', `Distance in ${uMi() ? 'miles' : 'kilometres'}`);
   el('emins').value = w.sec ? fmtDurPlain(w.sec) : '';
   el('ehr').value = w.hr ?? ''; el('eelev').value = w.elev ?? ''; el('enotes').value = clean(w.notes) || '';
   $('#edittitle').textContent = `Edit workout — ${w.date}`;
-  $('#editmodal').hidden = false; el('etitle').focus();
+  $('#editmodal').hidden = false;
+  el('etitle').focus();
 }
-function closeEditor() { $('#editmodal').hidden = true; editingId = null; }
+function closeEditor() {
+  $('#editmodal').hidden = true;
+  const back = editingId && lastEdited === editingId ? document.querySelector(`[data-edit="${CSS.escape(editingId)}"]`) : null;
+  editingId = null;
+  if (back) try { back.focus({ preventScroll: false }); } catch {}
+}
 $('#editcancel').onclick = closeEditor;
 $('#editclose').onclick = closeEditor;
 $('#editmodal').addEventListener('click', (e) => { if (e.target === $('#editmodal')) closeEditor(); });
@@ -1270,14 +1299,21 @@ $('#editform').addEventListener('submit', (e) => {
   e.preventDefault(); if (!editingId) return;
   const i = ws.findIndex((x) => x.id === editingId); if (i < 0) return closeEditor();
   const old = ws[i], f = Object.fromEntries(new FormData(e.target));
-  const date = toDate(f.edate); if (!date) return msg('Pick a valid date.');
-  const km = toKm(+f.ekm || 0), sec = parseDuration(f.emins || '0');
-  const next = { ...old, date, type: String(f.etype || 'Run'), title: String(f.etitle || 'Workout'), km: +(km || 0).toFixed(2), sec, pace: km > 0 && sec > 0 ? sec / km : null, hr: num(f.ehr), elev: num(f.eelev), notes: String(f.enotes || ''), ts: Date.now() };
+  const date = toDate(f.edate); if (!date) return editErr('Pick a valid date (YYYY-MM-DD).');
+  const kmRaw = parseFloat(f.ekm);
+  if (f.ekm !== '' && (!isFinite(kmRaw) || kmRaw < 0)) return editErr('Distance must be a number of 0 or more.');
+  const sec = parseDuration(f.emins || '0');
+  if ((f.emins || '').trim() && !(sec > 0)) return editErr('Duration could not be read. Use minutes (30), MM:SS (4:00) or HH:MM:SS (1:30:00).');
+  const hr = num(f.ehr), elev = num(f.eelev);
+  if (hr != null && (hr < 30 || hr > 230)) return editErr('Average heart rate should be between 30 and 230 bpm.');
+  if (elev != null && (elev < 0 || !isFinite(elev))) return editErr('Elevation must be 0 metres or more.');
+  const km = toKm(kmRaw || 0);
+  const next = { ...old, date, type: String(f.etype || 'Run'), title: String(f.etitle || 'Workout'), km: +(km || 0).toFixed(2), sec, pace: km > 0 && sec > 0 ? sec / km : null, hr, elev, notes: String(f.enotes || ''), ts: Date.now() };
   const nid = wid(next);
-  if (nid !== old.id && ws.some((x) => x.id === nid)) return msg('That matches another workout already in your log.');
+  if (nid !== old.id && ws.some((x) => x.id === nid)) return editErr('That matches another workout already in your log.');
   if (nid !== old.id) delete dead[nid]; // an earlier delete of this same content is now overwritten by the edit
   ws = [...ws.slice(0, i), { ...next, id: nid }, ...ws.slice(i + 1)];
-  save(); closeEditor(); renderDash(); msg('Workout updated.');
+  save(); lastEdited = nid; closeEditor(); renderDash(); msg('Workout updated.');
   if (nid !== old.id) reconcile([nid]); // the coach matches plan days by workout id, so re-check the edited session
 });
 $('#clear').onclick = () => { if (confirm('Delete every workout and the saved coach plan? With sync on, this clears your other device too.')) { const n = Date.now(); ws.forEach((w) => { dead[w.id] = n; }); ws = []; coachLast = { at: n, note: '', data: null }; save(); restoreCoach(); renderDash(); } };
@@ -2370,6 +2406,7 @@ function updateAuthUI() {
     if (!currentUser && recovering) { gate.hidden = true; document.body.style.overflow = ''; } // let the password-recovery panel through
     if (!gate.hidden && typeof syncGateUI === 'function') syncGateUI();
   }
+  document.documentElement.classList.toggle('gated', !!gate && gate.hidden !== true);
   setPill();
 }
 
@@ -2521,7 +2558,6 @@ $('#footlegalbtn').onclick = openLegalModal;
 $('#setlegalbtn').onclick = openLegalModal;
 $('#floatlegalbtn').onclick = openLegalModal;
 $('#floatcookiebtn').onclick = openCookiePrefs;
-try { document.documentElement.classList.add('hasfootlegal'); } catch {}
 $('#legalclose').onclick = closeLegalModal;
 $('#legalok').onclick = closeLegalModal;
 $('#legalmodal').addEventListener('click', (e) => { if (e.target === $('#legalmodal')) closeLegalModal(); });
@@ -2536,8 +2572,9 @@ function ckApply(p) {
   lsSet('emric.cookieconsent', JSON.stringify(ckPrefs));
   try { localStorage.setItem('cookie_consent', ckPrefs.analytics || ckPrefs.ads ? 'true' : 'false'); } catch {}
   $('#ckbanner').hidden = true;
+  document.body.classList.remove('ckopen');
 }
-function ckShowBanner() { $('#ckbanner').hidden = false; $('#ckaccept').focus(); }
+function ckShowBanner() { $('#ckbanner').hidden = false; document.body.classList.add('ckopen'); $('#ckaccept').focus(); }
 $('#ckaccept').onclick = () => { ckApply({ essential: true, analytics: true, ads: true }); msg('Cookie preferences saved: analytics and advertising cookies enabled. You can change this any time under "Cookie preferences".'); };
 $('#ckessential').onclick = () => { ckApply({ essential: true, analytics: false, ads: false }); msg('Cookie preferences saved: only essential cookies are used. You can change this any time under "Cookie preferences".'); };
 function openCookiePrefs() {
@@ -2545,6 +2582,7 @@ function openCookiePrefs() {
   if (!p) return ckShowBanner();
   const all = !!(p.analytics && p.ads);
   $('#ckbanner').hidden = false;
+  document.body.classList.add('ckopen');
   $('#cktitle').textContent = 'Cookie preferences';
   $('#ckaccept').textContent = all ? 'Update: accept all' : 'Accept all';
   $('#ckessential').textContent = (!p.analytics && !p.ads) ? 'Update: essential only' : 'Essential only';
