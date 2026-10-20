@@ -1552,9 +1552,12 @@ async function ask() {
       try { d = finishPlan(JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)), a); } catch {}
     }
     if (!d) throw new Error('The coach sent a reply the app could not read. Try again.');
-    d.updates = askUpdates(coachLast && coachLast.data, d);
+    const prevD = coachLast && coachLast.data;   // keep a reference: coachLast is replaced below
     d.reviewed = ws.filter((w) => w.date >= addDays(todayStr(), -14)).map((w) => w.id).slice(-300);
     coachLast = { at: Date.now(), rev: Date.now(), note: [feeling, $('#note').value.slice(0, 300)].filter(Boolean).join(': '), data: d };
+    // computed after coachLast exists: askUpdates and the safety check save through it
+    d.updates = askUpdates(prevD, d);
+    safetyCheck('');
     renderResults(d); say(d.headline || 'Here is your plan.'); save(); setMeta(); flashMood('cheer');
   } catch (e) { err(e.message); say('Something went wrong. Check the message below and try again.', true); flashMood('oops', 3200); }
   finally { clearTimeout(tm); setBusy(false); }
@@ -1765,14 +1768,25 @@ function diffWeeks(oldW, newW) {
   return items;
 }
 const findUpdate = (d, id) => (d && Array.isArray(d.updates) ? d.updates.find((u) => u && u.id === id) : null);
+// Update cards can appear twice at once (in the log and in a chat bubble), so every button gets a unique DOM id.
+let actSeq = 0;
+const actId = (act, uid) => `a${++actSeq}-${String(uid).replace(/[^a-zA-Z0-9_-]/g, '')}`;
 function pushUpdate(d, u) {
   d.updates = Array.isArray(d.updates) ? d.updates : [];
   const full = { id: newId(), at: Date.now(), ...u };
+  // A day that has since been changed again cannot be undone cleanly, so drop the stale entry instead of showing a dead card.
+  if (u.src === 'added' && u.day && Array.isArray(d.week)) {
+    const dates = new Set(u.items.map((it) => it.date));
+    const live = d.updates.filter((o) => !(o && o.src === 'added' && o.day === u.day && o.items && o.items.some((it) => dates.has(it.date))));
+    live.unshift(full); d.updates = live.slice(0, 20); return full;
+  }
   d.updates.unshift(full); d.updates = d.updates.slice(0, 20); return full;
 }
 const flash = (t) => { planNote(t); setTimeout(() => planNote(''), 9000); };
 const currentCtx = () => { const today = todayStr(); return { today, a: analyze(ws, today, { feeling, note: '', profile, prev: null }) }; };
 const afterChange = (d) => { coachLast.rev = Date.now(); save(); renderResults(d); renderChat(); };
+// After applying or undoing, move focus to the replacement control (Undo after Apply, Apply change after Undo) so keyboard users are not stranded.
+const refocusAct = (uid, want) => { setTimeout(() => { const n = $(`#ulist [data-act="${want}"][data-uid="${CSS.escape(uid)}"]`) || $(`#chatlog [data-act="${want}"][data-uid="${CSS.escape(uid)}"]`); if (n) try { n.focus({ preventScroll: true }); } catch {} }, 80); };
 
 // Dry run against the safety rules. Nothing is changed until the caller commits d.week = r.trial.
 function tryApply(d, changes, a, from, today) {
@@ -1836,7 +1850,7 @@ function applyUpdate(id) {
   const d = coachLast && coachLast.data, u = findUpdate(d, id);
   if (!u || !['pending', 'kept', 'undone'].includes(u.status)) return;
   const { today, a } = currentCtx(); rollPlan(d, today);
-  if (commitItems(d, u, a, today)) afterChange(d);
+  if (commitItems(d, u, a, today)) { afterChange(d); refocusAct(id, 'undo'); }
 }
 function keepUpdate(id) {
   const d = coachLast && coachLast.data, u = findUpdate(d, id);
@@ -1850,11 +1864,13 @@ function undoUpdate(id) {
   const r = tryApply(d, changes, a, editableFrom(today), today);
   if (r.blocked) { flash(`Can't undo while a safety limit applies. ${unsafeMsg(a)}`); return; }
   if (!r.items.length) { flash('Nothing to undo: those days have passed or have changed again.'); return; }
-  d.week = r.trial; u.status = 'undone'; afterChange(d);
+  d.week = r.trial; u.status = 'undone'; afterChange(d); refocusAct(id, 'apply');
 }
 async function suggestFor(id) {   // Keep mode: the athlete asked for a suggestion
   const d = coachLast && coachLast.data, u = findUpdate(d, id);
   if (!u || u.status !== 'offer') return;
+  const b = $(`#ulist [data-act="suggest"][data-uid="${CSS.escape(id)}"]`) || $(`#chatlog [data-act="suggest"][data-uid="${CSS.escape(id)}"]`);
+  if (b) { b.disabled = true; b.textContent = 'Asking…'; }
   const { today, a } = currentCtx(); rollPlan(d, today);
   const prop = (await aiProposal(d, 'upload', { acts: u.acts || [], mismatches: u.mism || [] })) || localProposal(d, u.mism || [], a, editableFrom(today));
   if (coachLast.data !== d) return;
@@ -1874,7 +1890,20 @@ function safetyCheck(note) {
   const before = snap(d.week[i]), pick = safePick(a), why = a.reasons.slice(0, 2).join('. ');
   setDay(d.week, i, { kind: pick, plan: SAFE[pick].title, km: null, safe: true, detail: { ...SAFE[pick], kind: pick, distance_km: null, why } });
   pushUpdate(d, { src: 'safety', status: 'applied', why: `${why}. ${cap1(before.kind)} is not allowed right now, so I switched today to ${pick}. This safety limit applies in every mode.`, items: [{ date: today, from: before, to: snap(d.week[i]) }] });
+  d.updates = dedupeSafety(d.updates);
   coachLast.rev = Date.now(); save(); return true;
+}
+// The same check runs on load, on feel changes and in chat, so collapse repeated identical safety cards into the newest one.
+function dedupeSafety(list) {
+  const seen = new Set();
+  return list.filter((u) => {
+    if (!u || u.src !== 'safety' || u.status !== 'applied') return true;
+    const its = u.items || [];
+    if (its.length !== 1 || !its[0] || !its[0].from || !its[0].to) return true;
+    const key = `${its[0].date}|${its[0].from.kind}->${its[0].to.kind}`;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
 }
 // A fresh plan from "Ask coach" replaces the old one: record what differs so it can be seen (and undone).
 function askUpdates(oldD, newD) {
@@ -1888,7 +1917,7 @@ function updateCard(u, a, today) {
   const desc = (x) => (x ? `${cap1(x.kind)}${x.km ? ' ' + fmtKm(x.km) : ''}` : 'Nothing');
   const lines = (u.items || []).map((it) => `<div class="uline"><b>${esc(rel(it.date))}:</b> ${it.from ? esc(desc(it.from)) : '<span class="mute">New day</span>'} <span class="arrow" aria-label="changed to">→</span> ${esc(desc(it.to))}</div>`).join('');
   const st = STAT[u.status] || STAT.info, statText = u.src === 'safety' && u.status === 'applied' ? 'Safety change' : u.src === 'added' ? 'New day added' : st[0];
-  const btn = (act, text, cls) => `<button class="btn ${cls}" data-act="${act}" data-uid="${esc(u.id)}">${text}</button>`;
+  const btn = (act, text, cls) => `<button class="btn ${cls}" id="${esc(actId(act, u.id))}" data-act="${act}" data-uid="${esc(u.id)}">${text}</button>`;
   let acts = '';
   if (u.status === 'pending') acts = btn('apply', 'Apply change', 'mint') + btn('keep', 'Keep my plan', 'sky');
   else if (u.status === 'offer') acts = btn('suggest', 'Get a suggestion', 'sky');
@@ -1916,10 +1945,13 @@ function setMode(m) {
   if (coachLast && coachLast.data) renderResults(coachLast.data); else renderModes();
 }
 $('#modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
-function uAct(e) {
-  const b = e.target.closest('[data-act]'); if (!b) return;
-  const f = { apply: applyUpdate, keep: keepUpdate, undo: undoUpdate, suggest: suggestFor }[b.dataset.act];
-  if (f) f(b.dataset.uid);
+async function uAct(e) {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  b.disabled = true;   // one action at a time: stop double taps from applying or undoing twice
+  try {
+    const f = { apply: applyUpdate, keep: keepUpdate, undo: undoUpdate, suggest: suggestFor }[b.dataset.act];
+    if (f) await f(b.dataset.uid);
+  } finally { if (document.body.contains(b)) b.disabled = false; }
 }
 $('#ulist').onclick = uAct;
 // Clears the log of coach updates. Suggestions still waiting for a decision stay, so nothing pending is lost.
