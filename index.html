@@ -2497,7 +2497,7 @@ $('#recsave').onclick = async () => {
 function wipeLocal() {   // forget everything stored for the previous account on this device
   ws = []; dead = {}; coachLast = null; profile = cleanProfile(null); chat = []; chatClr = 0; prefs = {}; lastSyncAt = 0; lastVer = '';
   lsSet('pp.prefs', '{}'); lsSet('pp.dirty', ''); lsSet('pp.lastsync', '0'); lsSet('pp.uid', ''); lsSet('pp.chat', '[]'); lsSet('pp.chatclr', '0');
-  lsSet('pp.strava.last', ''); lsSet('pp.polar.tok', ''); lsSet('pp.polar.state', ''); lsSet('pp.polar.member', '');   // import history and Polar link belong to the account that was signed in
+  lsSet('pp.strava.last', ''); lsSet('pp.polar.tok', ''); lsSet('pp.polar.state', ''); lsSet('pp.polar.member', ''); lsSet('pp.polar.from', '');   // import history and Polar link belong to the account that was signed in
   save(false); renderChat(); restoreCoach(); fillProfile(); renderDash();
   if (typeof stravaLast === 'function') stravaLast();
   if (typeof polarUi === 'function') polarUi();
@@ -3032,10 +3032,12 @@ async function importFile(f) {
 });
 
 /* ---------- Polar sync: exercises through supabase/functions/polar (AccessLink is free) ---------- */
-const POLAR_AUTH = 'https://flow.polar.com/oauth2/authorization', POLAR_SCOPE = 'accesslink.read_all';
+const POLAR_AUTH = 'https://flow.polar.com/oauth2/authorization', POLAR_SCOPE = 'readatlas.exercise';
 const polarTok = () => { try { return JSON.parse(lsGet('pp.polar.tok', 'null')) || null; } catch { return null; } };
 const polarSetTok = (t) => lsSet('pp.polar.tok', t ? JSON.stringify(t) : '');
-const polarRedirect = () => location.origin + location.pathname;
+const polarRedirect = () => location.origin + location.pathname;   // Polar Flow needs the exact URI registered in its team settings
+// The OAuth round-trip only survives if we're back on the same origin that started it.
+const polarSameOrigin = (() => { try { return !!lsGet('pp.polar.from') && new URL(lsGet('pp.polar.from')).origin === location.origin; } catch { return false; } })();
 function polarUi() {
   const t = polarTok(), on = !!(t && t.access_token);
   const uri = $('#polarredirect');
@@ -3095,10 +3097,12 @@ async function polarSync() {
 async function polarConnect() {
   stravaMsg('');
   try {
+    if (!currentUser) throw new Error('Sign in first — Polar access belongs to your Emric account.');
     const cfg = await polarApi({ action: 'config' });
     if (!cfg.client_id) throw new Error('Polar is not configured on the server yet (POLAR_CLIENT_ID is missing).');
     const st = uid();
     lsSet('pp.polar.state', st);
+    lsSet('pp.polar.from', location.href.split('?')[0]);   // where to land after Polar bounces back, and proof this browser started the flow
     const u = new URL(POLAR_AUTH);
     u.searchParams.set('response_type', 'code');
     u.searchParams.set('client_id', String(cfg.client_id));
@@ -3113,17 +3117,18 @@ async function polarConnect() {
 async function polarLanded() {
   const p = new URLSearchParams(location.search), code = p.get('code'), bad = p.get('error');
   if (!code && !bad) return;
-  try { history.replaceState(null, '', location.pathname + location.hash); } catch {}
+  try { history.replaceState(null, '', location.pathname + (location.hash || '')); } catch {}   // keep any #settings jump so the panel is visible after the round-trip
   openStrava(true);
-  if (bad) { stravaMsg(`Polar did not share access (${bad}).`, true); return; }
-  if (p.get('state') !== lsGet('pp.polar.state', '')) { stravaMsg('That Polar sign-in could not be verified. Tap Connect to try again.', true); return; }
+  if (bad) { lsSet('pp.polar.state', ''); stravaMsg(`Polar did not share access (${bad}).`, true); return; }
+  const want = lsGet('pp.polar.state', '');
   lsSet('pp.polar.state', '');
+  if (!want || p.get('state') !== want) { stravaMsg(polarSameOrigin ? 'That Polar sign-in could not be verified. Tap Connect to try again.' : 'This browser never started the Polar connection, so the callback was ignored. Open Emric where you tapped Connect.', true); return; }
   stravaMsg('Connecting to Polar…');
   try {
     const member = lsGet('pp.polar.member', '') || uid();
     lsSet('pp.polar.member', member);
     const d = await polarApi({ action: 'exchange', code, redirect_uri: polarRedirect(), member_id: member });
-    if (!d.access_token) throw new Error('Polar did not send an access token. Try connecting again.');
+    if (!d.access_token) throw new Error(/invalid_request|invalid grant/i.test(String(d.error || '')) ? 'Polar rejected that sign-in link — it was already used or has expired. Tap Connect to start again.' : (d.error || 'Polar did not send an access token. Try connecting again.'));
     polarSetTok({ access_token: d.access_token, user_id: d.user_id });
     polarUi(); await polarSync();
   } catch (e) { stravaMsg(e.message || 'Could not finish the Polar connection.', true); polarUi(); }
@@ -3147,7 +3152,7 @@ if (!SAMPLE) { $('#sample').hidden = true; $('#emptytext').textContent = 'Import
 applyPrefs({}, true); renderDash(); restoreCoach(); maybeRefresh(); scheduleMidnight(); setPill();
 if (PWA && 'serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 updateAuthUI();
-initAuth().then(() => getGroqKey()).then(() => { syncNow(); maybeRefresh(); }).finally(() => { try { polarUi(); polarLanded().catch(() => {}); } catch (e) {} });
+initAuth().then(() => getGroqKey()).then(() => { syncNow(); maybeRefresh(); }).finally(() => { try { polarUi(); polarLanded().catch(() => {}); } catch (e) {} });   // runs after auth settles, so the Polar callback can use the session and show the import panel even behind the sign-in gate
 </script>
 <script>
 (function(){var d=document.documentElement;['authpanel','settings','stravapanel'].forEach(function(id){var el=document.getElementById(id);if(!el)return;
