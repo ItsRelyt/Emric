@@ -665,6 +665,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
     <section class="px">
       <h2 style="margin-bottom:12px">Weekly run distance</h2>
       <div class="bars" id="bars" role="group" aria-label="Weekly run distance for the last 12 weeks"></div>
+      <div class="dlabels mute xs" id="barlabels" aria-hidden="true"></div>
       <p id="barval" class="sm" role="status" aria-live="polite" style="margin:8px 0 0">Tap a bar to see its week and distance.</p>
       <div class="row between mute sm" style="margin-top:8px"><span>12 weeks ago</span><span id="peak"></span><span>this week</span></div>
     </section>
@@ -740,7 +741,7 @@ const theme = () => document.documentElement.classList.contains('clean');
 const CLEAN_DEFAULT = { hat: 'None', outfit: 'Gym tank' };
 const lookClean = (() => { try { return { ...CLEAN_DEFAULT, ...JSON.parse(lsGet('pp.lookc', '{}')) }; } catch { return { ...CLEAN_DEFAULT }; } })();
 const curLook = () => (theme() ? lookClean : look);   // each look keeps its own hat and outfit
-const COL = () => (theme() ? { hi: '#2f7d52', lo: '#a9c9b6', empty: '#e4e4e4', line: '#2f7d52', dot: '#fff', dotEdge: '#2f7d52' } : { hi: '#ffb870', lo: '#7ee0b5', empty: '#38337a', line: '#7ee0b5', dot: '#ffb870', dotEdge: '#14122b' });
+const COL = () => (theme() ? { hi: '#111111', lo: '#8f8f8f', empty: '#e4e4e4', line: '#111111', dot: '#fff', dotEdge: '#111111' } : { hi: '#ffb870', lo: '#7ee0b5', empty: '#38337a', line: '#7ee0b5', dot: '#ffb870', dotEdge: '#14122b' });
 // Clean look: a drawn (vector) coach in the style of a thick-outlined doodle, with the same hats and outfits as the pixel coach.
 const coachTop = (lk) => ({ Wizard: -38, Party: -41, Chef: -34, Crown: -22, Viking: -20, Cap: -18 }[lk.hat] ?? -6);
 const coachRatio = (lk) => (212 - coachTop(lk)) / 190;
@@ -1169,6 +1170,7 @@ function renderDash() {
   const wkLabel = (i) => `Week of ${shortDate(addDays(today, -(((11 - i) * 7) + 6)))}`;
   $('#bars').setAttribute('aria-label', `Weekly run distance for the last 12 weeks: ${wk.map((v) => fmtKm(v)).join(', ')}`);
   $('#bars').innerHTML = wk.map((v, i) => `<i role="button" tabindex="0" data-i="${i}" data-label="${esc(wkLabel(i))}" data-v="${esc(fmtKm(v))}" aria-label="${esc(wkLabel(i) + ': ' + fmtKm(v))}" title="${esc(fmtKm(v))}" style="height:${Math.max(6, v / mx * 100)}%;background:${i === 11 ? COL().hi : COL().lo}"></i>`).join('');
+  const bl = $('#barlabels'); if (bl) bl.innerHTML = wk.map((v, i) => `<span>${i % 2 ? '' : esc(shortDate(addDays(today, -(((11 - i) * 7) + 6))))}</span>`).join('');
   $('#peak').textContent = `peak ${fmtKm(mx)}`;
   const bv = $('#barval'); if (bv) bv.textContent = 'Tap a bar to see its week and distance.';
   renderLog(); renderProgress(); renderRecap(); showTab(tab);
@@ -1553,16 +1555,22 @@ async function ask() {
       const txt = await callGroq(key, model, user, ctl, SYSTEM, [], a.next7.length > 7 ? 9000 : 5000);
       try { d = finishPlan(JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)), a); } catch {}
     }
-    if (!d) throw new Error('The coach sent a reply the app could not read. Try again.');
-    const prevD = coachLast && coachLast.data;   // keep a reference: coachLast is replaced below
-    d.reviewed = ws.filter((w) => w.date >= addDays(todayStr(), -14)).map((w) => w.id).slice(-300);
-    coachLast = { at: Date.now(), rev: Date.now(), note: [feeling, $('#note').value.slice(0, 300)].filter(Boolean).join(': '), data: d };
-    // computed after coachLast exists: askUpdates and the safety check save through it
-    d.updates = askUpdates(prevD, d);
-    safetyCheck('');
-    renderResults(d); say(d.headline || 'Here is your plan.'); save(); setMeta(); flashMood('cheer');
-  } catch (e) { err(e.message); say('Something went wrong. Check the message below and try again.', true); flashMood('oops', 3200); }
+    if (!d) throw new Error('The coach sent a reply the app could not read.');
+    storeCoach(d, a);
+  } catch (e) {
+    err(e.message); say('Something went wrong. Check the message below and try again.', true); flashMood('oops', 3200);
+  }
   finally { clearTimeout(tm); setBusy(false); }
+}
+// Saves a finished plan as the current one and shows it.
+function storeCoach(d, a) {
+  const prevD = coachLast && coachLast.data;   // keep a reference: coachLast is replaced below
+  d.reviewed = ws.filter((w) => w.date >= addDays(todayStr(), -14)).map((w) => w.id).slice(-300);
+  coachLast = { at: Date.now(), rev: Date.now(), note: [feeling, $('#note').value.slice(0, 300)].filter(Boolean).join(': '), data: d };
+  // computed after coachLast exists: askUpdates and the safety check save through it
+  d.updates = askUpdates(prevD, d);
+  safetyCheck('');
+  renderResults(d); say(d.headline || 'Here is your plan.'); save(); setMeta(); flashMood('cheer');
 }
 /* ---------- plan engine: dated plan, daily roll, matching, adjustments ---------- */
 const kindOf = (k) => { k = S(k).toLowerCase().trim(); return KINDS.includes(k) ? k : null; };
@@ -1709,6 +1717,7 @@ function planDays(d, a) {
   const today = a.facts.today.date;
   return [...(d.past || []).slice(-3), ...(d.week || []).slice(0, 14)].map((x) => { const st = dayStatus(x, today, a); return { date: x.date, dow: dowOf(x.date), kind: x.kind, plan: S(x.plan).slice(0, 100), km: x.km || null, status: st.s, ...(st.text ? { actual: st.text } : {}), ...(x.auto ? { auto: true } : {}) }; });
 }
+
 
 // Applies changed days from the coach (or the chat), then re-checks the safety rules.
 function applyChanges(d, changes, a, from, today) {
@@ -2258,7 +2267,7 @@ async function recapImage(R) {
   const cl = theme(), W = 720, H = 960, c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d'), B = "'Atkinson Hyperlegible',system-ui,sans-serif", F = cl ? B : "'Pixelify Sans','Courier New',monospace", wt = cl ? 700 : 600;
   const K = cl
-    ? { bg: '#ffffff', edge: '#111111', panel: '#ffffff', box: '#f1f1f1', head: '#111111', mute: '#595959', text: '#111111', big: '#2f7d52', hi: '#2f7d52', empty: '#e4e4e4', a1: '#2f7d52', a2: '#b4412f' }
+    ? { bg: '#ffffff', edge: '#111111', panel: '#ffffff', box: '#f1f1f1', head: '#111111', mute: '#595959', text: '#111111', big: '#111111', hi: '#111111', empty: '#e4e4e4', a1: '#111111', a2: '#8f8f8f' }
     : { bg: '#1f1c40', edge: '#14122b', panel: '#2b2759', box: '#38337a', head: '#ffb870', mute: '#b3addf', text: '#f1ecff', big: '#7ee0b5', hi: '#7ee0b5', empty: '#38337a', a1: '#ffb870', a2: '#ff7a9a' };
   const rect = (x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
   const text = (s, x, y, size, color, font = F, weight = wt, align = 'left') => { g.font = `${weight} ${size}px ${font}`; g.fillStyle = color; g.textAlign = align; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); };
