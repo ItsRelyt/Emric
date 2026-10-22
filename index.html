@@ -608,6 +608,8 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
     </div>
   </section>
 
+  <!-- plan length switch lives outside #res so it works even before a plan exists -->
+  <div id="spanbox" class="row" role="group" aria-label="Plan length" style="margin-bottom:8px"></div>
   <div id="res" class="stack" hidden>
     <p id="planmsg" class="px ok sm" style="margin:0" role="status" hidden></p>
     <section id="updates" class="px stack">
@@ -636,7 +638,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
     <div class="row" style="justify-content:center" id="sprite2"></div>
     <p class="d" style="font-size:1.25rem;margin:0">No workouts yet.</p>
     <p id="emptytext" class="mute" style="margin:0">Import a CSV, JSON or Strava export, log a workout below, or sign in to load your workouts.</p>
-    <div class="row" style="justify-content:center"><button class="btn sky" id="stravabtn2">Import activities</button><button class="btn mint" id="sample">Load sample log</button></div>
+    <div class="row" style="justify-content:center"><button class="btn sky" id="stravabtn2">Import activities</button></div>
   </section>
 
   <div id="dash" class="stack" hidden><div id="p-prog" class="stack" hidden>
@@ -688,7 +690,6 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 
 <script>
 'use strict';
-const SAMPLE = null;
 const PWA = false;
 
 /* ---------- helpers ---------- */
@@ -1057,10 +1058,14 @@ const err = (t) => { const e = $('#err'); e.textContent = t; e.hidden = !t; };
 
 /* ---------- render ---------- */
 const tile = (icon, label, value, sub) => `<div class="px tile">${icon ? drawnIcon(icon) : ''}<div><div class="mute sm">${esc(label)}</div><div class="big">${esc(value)}</div><div class="mute sm" style="margin-top:4px">${esc(sub)}</div></div></div>`;
+const spanToggleHtml = () => `<button class="chip" data-span="week" aria-pressed="${profile.span !== 'goal'}">Next 7 days</button><button class="chip" data-span="goal" aria-pressed="${profile.span === 'goal'}">Until goal date</button>`;
+// The plan-length switch lives in #spanbox (outside the results panel) so it works even before any plan exists.
+function renderSpanToggle() { const b = $('#spanbox'); if (b) b.innerHTML = spanToggleHtml(); }
 function renderDash() {
   const has = ws.length > 0;
   $('#empty').hidden = has; $('#dash').hidden = !has; $('#tabs').hidden = !has;
   $('#xcsv').disabled = $('#xjson').disabled = !has; $('#ask').disabled = !has || busy;
+  renderSpanToggle();
   if (!has) { say('Load some workouts and I will plan your day.', true); showTab('coach'); return; }
   if (!$('#say').textContent.trim() || /^Load some/.test($('#say').textContent)) say('Ready when you are. Tell me how you feel and I will plan today.', true);
   const s = summarize(ws, todayStr());
@@ -1112,21 +1117,20 @@ function renderResults(d) {
   const i0 = d.week.findIndex((x) => x.date >= today);
   if (i0 < 0) {
     $('#today').innerHTML = '<h2>Plan finished</h2><p style="margin:0">Your last plan has run out. Tap Ask coach for a fresh one.</p>';
-    $('#insights').hidden = true; $('#weekbox').innerHTML = ''; $('#watch').hidden = true; return;
+    $('#insights').hidden = true; $('#weekbox').innerHTML = ''; $('#watch').hidden = true; renderSpanToggle(); return;
   }
   $('#insights').hidden = false;
   const item = d.week[i0], t = todayDetail(item, a), st = dayStatus(item, today, a);
   const banner = st.s === 'done' && st.text ? `<p class="sm c-mint" style="margin:0">Done: ${esc(st.text)}</p>` : st.s === 'changed' ? `<p class="sm c-peach" style="margin:0">You logged ${esc(st.text)}, which differs from the plan (${esc(st.why)}). Your coach has adjusted the rest of the week.</p>` : '';
   $('#today').innerHTML = `<div class="row"><span class="badge">${esc(item.kind)}</span><h2>${esc(t.title)}</h2></div>${item.note ? `<p class="sm c-berry" style="margin:0">${esc(item.note)}</p>` : ''}${banner}<p class="pre" style="margin:0">${esc(t.plan)}</p><dl>${dl('Target', t.target)}${dl('Duration', t.duration)}${dl('Distance', t.distance_km ? fmtKm(t.distance_km) : '')}${dl('Why', t.why)}${dl('If you feel worse', t.swap_if_worse)}</dl>`;
   $('#insights').innerHTML = fold('What I see', `<ul>${d.insights.map((x) => `<li><b class="d c-mint">${esc(x.title)}</b><p class="sm" style="margin:0">${esc(x.detail)}</p></li>`).join('')}</ul>`);
-  const L = planLen(today), days = d.week.slice(i0, i0 + L), names = { done: 'Done', changed: 'Changed', missed: 'Missed' }, long = L > 7;
+  const L = planLen(today), days = d.week.slice(i0, i0 + L), names = { done: 'Done', changed: 'Changed', missed: 'Missed' }, long = profile.span === 'goal';
   const phaseOf = (x) => (long && profile.date ? (dn(profile.date) - dn(x.date)) : 99);   // days left before the goal at this day
   const cardOf = (x) => { const s = dayStatus(x, today, a).s, ph = phaseOf(x); const tag = ph < 0 ? '' : ph <= 2 ? 'race tune-up' : ph <= 10 ? 'taper' : ph <= 24 ? 'sharpen' : ph <= 38 ? 'build' : ''; return `<div class="px${x.date === today ? ' is-today' : ''}"><div class="row between"><span class="d c-sky wkday">${esc(dowOf(x.date).slice(0, 2))}${x.date === today ? ' •' : ''}</span><span class="st st-${s}" style="font-size:.625rem;padding:0 6px" title="${esc(dayLabel(x.date))} · ${esc(x.kind)}${names[s] ? ` · ${names[s]}` : ''}">${names[s] ? esc(names[s][0]) : esc((SYM[s] || (tag ? '◆' : '·')))}</span></div><p class="wkplan sm" title="${esc(x.plan)}">${esc(x.plan)}${x.km ? ` <span class="wkkm">(${esc(fmtKm(x.km))})</span>` : ''}</p>${tag ? `<span class="xs mute">${esc(tag)}</span>` : ''}</div>`; };
   const wkTag = (ch) => { const ph = phaseOf(ch[ch.length - 1]); return ph < 0 ? 'Goal week' : ph <= 10 ? 'Taper' : ph <= 24 ? 'Sharpen' : ph <= 38 ? 'Build' : 'Base'; };
   const wkSummary = (ch) => { const km = r1(ch.reduce((s, x) => s + (RUNKINDS.includes(x.kind) ? x.km || 0 : 0), 0)); return `<span class="d">${esc(wkTag(ch))} · ${esc(shortDate(ch[0].date))}–${esc(shortDate(ch[ch.length - 1].date))}</span>${km ? ` <span class="mute sm">· ${esc(fmtKm(km))} km</span>` : ''}`; };
   const recent = (d.past || []).slice(-7).map((p) => `${dowOf(p.date)} ${SYM[dayStatus(p, today, a).s] || '·'}`).join('  ');
   const vn = volumeNote(days.slice(0, 7), a);
-  const tog = `<div class="row" role="group" aria-label="Plan length" style="margin-bottom:8px">${[['week', 'Next 7 days'], ['goal', 'Until goal date']].map(([k, l]) => `<button class="chip" data-span="${k}" aria-pressed="${(long ? 'goal' : 'week') === k}">${l}</button>`).join('')}</div>`;
   let body;
   if (!long) {
     body = `${recent ? `<p class="sm mute" style="margin:0">Recent: ${esc(recent)}</p>` : ''}${vn.volume ? `<p class="sm mute" style="margin:0">${esc(vn.volume)}</p>` : ''}<div class="week">${days.map(cardOf).join('')}</div>`;
@@ -1135,7 +1139,8 @@ function renderResults(d) {
     const blocks = bs.map(([a0, a1], w) => { const ch = days.slice(a0, a1); if (!ch.length) return ''; return `<details class="fold"${w === 0 ? ' open' : ''}><summary>${wkSummary(ch)}</summary><div class="week">${ch.map(cardOf).join('')}</div></details>`; }).join('');
     body = `<p class="sm mute" style="margin:0">${L} days until your goal on ${esc(dayLabel(profile.date))}, grouped by week.${d.week.some((x) => x.auto) ? ' Days marked ◆ are a simple outline until the coach plans them.' : ''}</p>${blocks}`;
   }
-  $('#weekbox').innerHTML = tog + fold(long ? 'Plan until goal date' : 'Next 7 days', body);
+  $('#weekbox').innerHTML = fold(long ? 'Plan until goal date' : 'Next 7 days', body);
+  renderSpanToggle();
   const extra = [d.watch_out && `<b class="d c-berry">Watch out: </b>${esc(d.watch_out)}`, d.stale && '<span class="sm">This plan is running low. Tap Ask coach for a fresh one.</span>',
     ...(d.fixesDate === today ? d.fixes || [] : []).map((f) => `<span class="sm">${esc(f)}</span>`), ...vn.warns.map((f) => `<span class="sm">${esc(f)}</span>`), d.data_notes && `<span class="mute sm">${esc(d.data_notes)}</span>`].filter(Boolean);
   $('#watch').hidden = !extra.length; $('#watch').innerHTML = extra.join('<br>');
@@ -1159,7 +1164,7 @@ $('#file').addEventListener('change', async (e) => {
     absorb(raw);
   } catch { msg('Could not read that file. Use a CSV with a Date column, or a JSON array of workouts.'); }
 });
-$('#sample').onclick = () => absorb(parseCSV(SAMPLE));
+// The sample-log loader was removed: no sample data ships with the app, and #empty text is static.
 const download = (fmt) => {
   const body = fmt === 'csv' ? toCSV(ws) : JSON.stringify(ws.map(({ id, ...w }) => w), null, 2);
   const a = document.createElement('a');
@@ -1628,9 +1633,9 @@ function autoFill(days, date, a) {
   const isRunK = (x) => !!x && RUNKINDS.includes(x.kind), win = days.slice(-6);
   const runN = win.filter(isRunK).length, restN = win.filter((x) => x.kind === 'rest').length, prev = isRunK(last), prev2 = isRunK(days[days.length - 2]);
   const longOk = a.profile.longDay === dow && !(last && HARD.includes(last.kind)) && !a.cutback && !a.returning && !a.spike && !win.some((x) => x.kind === 'long run');
-  const total = planLen(a.facts.today.date), off = dn(date) - dn(a.facts.today.date), ph = total > 7 ? (phaseMap(total, 0)[off] || 'base') : null;
+  const total = planLen(a.facts.today.date, a.profile), off = dn(date) - dn(a.facts.today.date), ph = total > 7 ? (phaseMap(total, 0)[off] || 'base') : null;
   const mid = a.target ? (a.target.min + a.target.max) / 2 : 0, share = Math.max(2, Math.min(cap, 4));
-  if (ph === 'taper' && date === profile.date) return { date, day: dayLabel(date), kind: 'easy run', plan: 'Goal day: race or time attempt, then easy cool-down', km: null, auto: true };
+  if (ph === 'taper' && date === a.profile.date) return { date, day: dayLabel(date), kind: 'easy run', plan: 'Goal day: race or time attempt, then easy cool-down', km: null, auto: true };
   let kind, km = null, plan;
   if (longOk || (runN < cap && !(prev && (prev2 || cap < 4)))) {
     kind = longOk ? 'long run' : 'easy run';
@@ -1661,15 +1666,19 @@ function rollPlan(d, today) {
   if (!d.week.length) { if (!d.expired) { d.expired = true; changed = true; } return changed; }
   if (d.expired) { delete d.expired; changed = true; }
   const want = planLen(today);
-  // Span switched to "until goal date" after the plan was made: extend it even when it already has 7+ days.
-  const longSpan = want > 7 && d.week.length >= want && !d.week.some((x) => x.auto);
-  if (d.week.length < want || longSpan) {
+  // Extend the plan whenever it is shorter than the current span (7-day plans switch to "until goal date" by growing with outline days).
+  if (d.week.length < want) {
     const a = analyze(ws, today, { feeling: '', note: '', profile, prev: null }), from = addDays(d.week[d.week.length - 1].date, 1), firstNew = d.week.length;
     while (d.week.length < want) d.week.push(autoFill(d.week, addDays(d.week[d.week.length - 1].date, 1), a));
     enforceDays(d.week, a, from); changed = true;
     const bulk = d.week.length - firstNew > 3, added = bulk ? [] : d.week.slice(firstNew).map((x) => ({ date: x.date, from: null, to: snap(x) })), ex = (d.updates || []).find((u) => u.src === 'added' && u.day === today);
     if (ex) ex.items.push(...added);
     else pushUpdate(d, { src: 'added', status: 'info', day: today, why: bulk ? 'I added a simple outline for the days up to your goal date. The coach will plan them properly when it can.' : 'Your plan rolled forward, so a new day was added at the end. I planned it from your usual routine and will refine it when I can.', items: added });
+  }
+  // Span switched back to 7 days: drop the outline tail so the stored plan matches what is shown.
+  if (want <= 7 && d.week.some((x) => x.auto)) {
+    const keepTo = addDays(today, 6);
+    d.week = d.week.filter((x) => x.date <= keepTo); changed = true;
   }
   const stale = d.week.filter((x) => !x.auto).length < 3;
   if (!!d.stale !== stale) { if (stale) d.stale = true; else delete d.stale; changed = true; }
@@ -1942,6 +1951,7 @@ function clearUpdates() {
 }
 $('#uclear').onclick = clearUpdates;
 
+// Shared guards for the background coach calls (declared before any function that reads them).
 let planBusy = false, lastTry = 0, lastFill = 0;
 // A newly logged activity: mark the planned day done if it matches, otherwise handle the mismatch the way the coaching mode says.
 async function reconcile(ids) { try { await reconcileRun(ids); } catch (e) { /* never get in the way of logging a workout */ } }
@@ -2028,15 +2038,19 @@ function setSpan(s) {
   const today = todayStr();
   if (s === 'goal' && !(profile.date && dn(profile.date) - dn(today) >= 7)) { flash('Set a goal date at least a week away first (Settings > Training profile), then pick Until goal date.'); toggleSettings(true); return; }
   profile = cleanProfile({ ...profile, span: s, asked: s === 'goal' ? '' : profile.asked, at: Date.now() }); save();   // switching to a goal-span block restarts the coach's pre-plan questions
-  const d = coachLast && coachLast.data; if (!d || !Array.isArray(d.week)) return;
+  renderSpanToggle();
+  const d = coachLast && coachLast.data; if (!d || !Array.isArray(d.week)) return;   // no plan yet: the next Ask coach will build it at full length
   if (rollPlan(d, today)) save(false);
   renderResults(d);
-  if (s === 'goal' && d.week.some((x) => x.auto)) aiFillAuto(d).then((ok) => { if (!ok && coachLast && coachLast.data === d && d.week.some((x) => x.auto)) flash('The coach could not plan every day yet, so a simple outline is shown. Sign in and tap Ask coach to try again.'); });
+  if (s === 'goal') {
+    if (d.week.some((x) => x.auto)) aiFillAuto(d).then((ok) => { if (!ok && coachLast && coachLast.data === d && d.week.some((x) => x.auto)) flash('The coach could not plan every day yet, so a simple outline is shown. Sign in and tap Ask coach to try again.'); });
+    else flash('Your saved plan already covers these days with real sessions. Tap Ask coach any time for a fresh plan that plans every day up to your goal date.');
+  }
 }
-$('#weekbox').onclick = (e) => { const b = e.target.closest('[data-span]'); if (b) setSpan(b.dataset.span); };
+$('#spanbox').onclick = (e) => { const b = e.target.closest('[data-span]'); if (b) setSpan(b.dataset.span); };
 function maybeRefresh() {
   const d = coachLast && coachLast.data, today = todayStr();
-  if (autoAI() && d && Array.isArray(d.week) && planLen(today) > 7 && d.week.some((x) => x.auto) && cachedGroqKey && Date.now() - lastFill > 600000) { lastFill = Date.now(); aiFillAuto(d).finally(() => maybeRefresh()); return; }
+  if (autoAI() && d && Array.isArray(d.week) && planLen(today) > 7 && d.week.some((x) => x.auto) && cachedGroqKey && Date.now() - lastFill > 600000) { lastFill = Date.now(); aiFillAuto(d).then(() => { if (d.week.some((x) => x.auto)) maybeRefresh(); }); return; }   // retry only while outline days remain; never recurse once the plan is fully coached
   if (!autoAI() || !d || !Array.isArray(d.week) || !d.week.length || d.refreshed === today || !cachedGroqKey || Date.now() - lastTry < 600000) return;
   lastTry = Date.now(); refreshDay();
 }
@@ -2380,7 +2394,7 @@ function setMeta() {
   m.textContent = `Last plan from ${when}${c.note ? ` (you said: "${c.note}")` : ''}. Ask again for a fresh one.`; m.hidden = false;
 }
 function restoreCoach() {
-  if (!coachLast || !coachLast.data) { $('#res').hidden = true; $('#coachmeta').hidden = true; return; }
+  if (!coachLast || !coachLast.data) { $('#res').hidden = true; $('#coachmeta').hidden = true; renderSpanToggle(); return; }
   try {
     if (rollPlan(coachLast.data, todayStr())) save(false);
     safetyCheck('');   // new day: past days drop off, a new last day is added
@@ -2549,6 +2563,8 @@ $('#recsave').onclick = async () => {
 
 function wipeLocal() {   // forget everything stored for the previous account on this device
   ws = []; dead = {}; coachLast = null; profile = cleanProfile(null); chat = []; chatClr = 0; prefs = {}; lastSyncAt = 0; lastVer = '';
+  Object.assign(lookClean, CLEAN_DEFAULT); lsSet('pp.lookc', JSON.stringify(lookClean));   // drop the previous account's coach look too
+  fillLookSelects(); setLogo(); drawCoach();
   lsSet('pp.prefs', '{}'); lsSet('pp.dirty', ''); lsSet('pp.lastsync', '0'); lsSet('pp.uid', ''); lsSet('pp.chat', '[]'); lsSet('pp.chatclr', '0');
   lsSet('pp.strava.last', ''); lsSet('pp.polar.tok', ''); lsSet('pp.polar.state', ''); lsSet('pp.polar.member', ''); lsSet('pp.polar.from', '');   // import history and Polar link belong to the account that was signed in
   save(false); renderChat(); restoreCoach(); fillProfile(); renderDash();
@@ -3201,7 +3217,7 @@ setLogo();
 fillLookSelects(); fillProfile(); applyLayout();
 $('#add [name=date]').value = todayStr();
 if (!getSbConfig().url) toggleSettings(true);
-if (!SAMPLE) { $('#sample').hidden = true; $('#emptytext').textContent = 'Import a CSV, a Strava or Garmin export, or sync Polar — or log a workout below.'; }
+renderSpanToggle();   // plan-length switch must exist even before any plan is made
 applyPrefs({}, true); renderDash(); restoreCoach(); maybeRefresh(); scheduleMidnight(); setPill();
 if (PWA && 'serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 updateAuthUI();
