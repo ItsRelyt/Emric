@@ -966,7 +966,7 @@ function fillLookSelects() {
   $('#units').value = uMi() ? 'mi' : 'km';
   const kmIn = $('#add [name=km]'); if (kmIn) { kmIn.placeholder = `Distance (${unitLabel()})`; kmIn.setAttribute('aria-label', `Distance in ${uMi() ? 'miles' : 'kilometres'}`); }
 }
-const setLook = () => { lsSet(theme() ? 'pp.lookc' : LOOK_KEY, JSON.stringify(curLook())); setPref(theme() ? 'lookc' : 'look', { hat: curLook().hat, outfit: curLook().outfit }); drawCoach(); renderRecap(); };
+const setLook = () => { lsSet('pp.lookc', JSON.stringify(curLook())); setPref('lookc', { hat: curLook().hat, outfit: curLook().outfit }); drawCoach(); renderRecap(); };
 $('#hat').onchange = (e) => { curLook().hat = e.target.value; setLook(); };
 $('#outfit').onchange = (e) => { curLook().outfit = e.target.value; setLook(); };
 $('#surprise').onclick = () => {
@@ -987,8 +987,7 @@ const dirtyNow = () => lsGet('pp.dirty', '') === '1';
 const markDirty = () => { dv++; lsSet('pp.dirty', '1'); };
 const L2 = (v) => (v && HATS[v.hat] !== undefined && OUTFITS[v.outfit] ? { hat: v.hat, outfit: v.outfit } : null);
 const PREF_OK = {
-  theme: (v) => (v === 'clean' || v === 'pixel' ? v : null),
-  look: L2, lookc: L2,
+  lookc: L2,
   goal: (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 14 ? n : null; },
   tab: (v) => (['coach', 'prog', 'log'].includes(v) ? v : null),
   sort: (v) => (v && ['date', 'type', 'title', 'km', 'sec', 'pace', 'hr', 'elev'].includes(v.k) && (v.d === 1 || v.d === -1) ? { k: v.k, d: v.d } : null),
@@ -1001,18 +1000,14 @@ const cleanPrefs = (p) => { const o = {}; for (const k of Object.keys(PREF_OK)) 
 let prefs = {};
 try { prefs = cleanPrefs(JSON.parse(lsGet('pp.prefs', '{}'))); } catch {}
 { // first run after upgrade: seed from the old per-key settings so nothing is lost
-  const seed = { theme: lsGet('pp.theme', ''), goal: lsGet('pp.goal', ''), tab: lsGet('pp.tab', '') };
+  const seed = { goal: lsGet('pp.goal', ''), tab: lsGet('pp.tab', '') };
   for (const [k, v] of Object.entries(seed)) if (v && !prefs[k]) { const c = PREF_OK[k](v); if (c !== null) prefs[k] = { v: c, at: 1 }; }
-  if (lsGet(LOOK_KEY, '') && !prefs.look && L2(look)) prefs.look = { v: L2(look), at: 1 };
   if (lsGet('pp.lookc', '') && !prefs.lookc && L2(lookClean)) prefs.lookc = { v: L2(lookClean), at: 1 };
-  if (!prefs.theme) prefs.theme = { v: lsGet('pp.theme', 'clean') === 'pixel' ? 'pixel' : 'clean', at: 0 };   // default look is the clean minimal black and white
 }
 const prefV = (k, d) => (prefs[k] ? prefs[k].v : d);
 const setPref = (k, v) => { const c = PREF_OK[k](v); if (c === null) return; prefs[k] = { v: c, at: Date.now() }; lsSet('pp.prefs', JSON.stringify(prefs)); markDirty(); schedulePush(); };
 function applyPrefs(old, first) {   // old = prefs before the merge; apply whatever changed
   const ch = (k) => prefs[k] && (!old[k] || old[k].at !== prefs[k].at), v = (k) => prefs[k].v;
-  if (ch('theme') && v('theme') !== (theme() ? 'clean' : 'pixel')) applyTheme(v('theme'), false);
-  if (ch('look')) { Object.assign(look, v('look')); lsSet(LOOK_KEY, JSON.stringify(look)); }
   if (ch('lookc')) { Object.assign(lookClean, v('lookc')); lsSet('pp.lookc', JSON.stringify(lookClean)); }
   if (ch('goal')) lsSet('pp.goal', String(v('goal')));
   if (ch('feel') && v('feel').day === todayStr()) { feeling = v('feel').f; if (document.activeElement !== $('#note')) $('#note').value = v('feel').note; }
@@ -1043,7 +1038,7 @@ const msg = (t) => { const m = $('#msg'); m.textContent = t; m.hidden = !t; };
 const err = (t) => { const e = $('#err'); e.textContent = t; e.hidden = !t; };
 
 /* ---------- render ---------- */
-const tile = (icon, label, value, sub) => `<div class="px tile">${icon ? (theme() ? drawnIcon(icon) : px(icon, 5)) : ''}<div><div class="mute sm">${esc(label)}</div><div class="big">${esc(value)}</div><div class="mute sm" style="margin-top:4px">${esc(sub)}</div></div></div>`;
+const tile = (icon, label, value, sub) => `<div class="px tile">${icon ? drawnIcon(icon) : ''}<div><div class="mute sm">${esc(label)}</div><div class="big">${esc(value)}</div><div class="mute sm" style="margin-top:4px">${esc(sub)}</div></div></div>`;
 function renderDash() {
   const has = ws.length > 0;
   $('#empty').hidden = has; $('#dash').hidden = !has; $('#tabs').hidden = !has;
@@ -2173,14 +2168,12 @@ function renderRecap() {
     + `<p class="sm" style="margin:0"><b class="d c-peach">Best moment: </b>${esc(R.best)}</p><p class="sm" style="margin:0"><b class="d c-berry">Next focus: </b>${esc(R.focus)}</p>`
     + `<div class="row"><button class="btn mint" data-rshare="1">Share image</button></div>`;
 }
-// Draws the recap as a PNG on a canvas, entirely in the browser. Follows the chosen look (pixel colour or clean black and white).
+// Draws the recap as a PNG on a canvas, entirely in the browser. Clean black and white style.
 async function recapImage(R) {
-  try { await Promise.all([document.fonts.load('600 40px "Pixelify Sans"'), document.fonts.load('700 24px "Atkinson Hyperlegible"'), document.fonts.load('400 24px "Atkinson Hyperlegible"')]); } catch {}
-  const cl = theme(), W = 720, H = 960, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d'), B = "'Atkinson Hyperlegible',system-ui,sans-serif", F = cl ? B : "'Pixelify Sans','Courier New',monospace", wt = cl ? 700 : 600;
-  const K = cl
-    ? { bg: '#ffffff', edge: '#111111', panel: '#ffffff', box: '#f1f1f1', head: '#111111', mute: '#595959', text: '#111111', big: '#111111', hi: '#111111', empty: '#e4e4e4', a1: '#111111', a2: '#8f8f8f' }
-    : { bg: '#1f1c40', edge: '#14122b', panel: '#2b2759', box: '#38337a', head: '#ffb870', mute: '#b3addf', text: '#f1ecff', big: '#7ee0b5', hi: '#7ee0b5', empty: '#38337a', a1: '#ffb870', a2: '#ff7a9a' };
+  try { await Promise.all([document.fonts.load('700 24px "Atkinson Hyperlegible"'), document.fonts.load('400 24px "Atkinson Hyperlegible"')]); } catch {}
+  const W = 720, H = 960, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), B = "'Atkinson Hyperlegible',system-ui,sans-serif", F = B, wt = 700;
+  const K = { bg: '#ffffff', edge: '#111111', panel: '#ffffff', box: '#f1f1f1', head: '#111111', mute: '#595959', text: '#111111', big: '#111111', hi: '#111111', empty: '#e4e4e4', a1: '#111111', a2: '#8f8f8f' };
   const rect = (x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
   const text = (s, x, y, size, color, font = F, weight = wt, align = 'left') => { g.font = `${weight} ${size}px ${font}`; g.fillStyle = color; g.textAlign = align; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); };
   const wrap = (s, x, y, maxW, size, color, lh) => {
@@ -2190,20 +2183,14 @@ async function recapImage(R) {
     return y;
   };
   rect(0, 0, W, H, K.bg);
-  if (cl) { rect(24, 24, 672, 912, K.edge); rect(26, 26, 668, 908, K.panel); }
-  else {
-    for (let x = 0; x < W; x += 32) rect(x, 0, 2, H, '#262350');
-    for (let y = 0; y < H; y += 32) rect(0, y, W, 2, '#262350');
-    rect(24, 24, 672, 912, K.edge); rect(32, 32, 656, 896, '#433e8f'); rect(36, 36, 648, 888, K.panel);
-  }
+  rect(24, 24, 672, 912, K.edge); rect(26, 26, 668, 908, K.panel);
   text('WEEKLY RECAP', 60, 100, 44, K.head);
   text(`${shortDate(R.start)} to ${shortDate(R.end)}${R.partial ? ' (so far)' : ''}`, 60, 138, 26, K.mute, B, 400);
-  if (cl) { try { const cw = 150; g.drawImage(await svgImage(drawnCoach(lookClean, cw)), 524, 36, cw, Math.round(cw * coachRatio(lookClean))); } catch {} }
-  else { const grid = coachGrid(look), sc = 6; grid.forEach((row, y) => [...row].forEach((ch, x) => { if (PAL[ch]) rect(530 + x * sc, 56 + y * sc, sc, sc, PAL[ch]); })); }
+  { try { const cw = 150; g.drawImage(await svgImage(drawnCoach(lookClean, cw)), 524, 36, cw, Math.round(cw * coachRatio(lookClean))); } catch {} }
   text(fmtKm(R.km), 60, 228, 80, K.big);
   text(`${R.runs} run${R.runs === 1 ? '' : 's'}, ${R.sessions} workout${R.sessions === 1 ? '' : 's'}`, 60, 272, 28, K.text, B, 400);
   recapStats(R).forEach(([l, v, s], i) => {
-    const x = 60 + (i % 3) * 210, y = 300 + Math.floor(i / 3) * 102, e = cl ? 2 : 4;
+    const x = 60 + (i % 3) * 210, y = 300 + Math.floor(i / 3) * 102, e = 2;
     rect(x, y, 196, 92, K.edge); rect(x + e, y + e, 196 - 2 * e, 92 - 2 * e, K.box);
     text(l, x + 12, y + 28, 18, K.mute, B, 400); text(v, x + 12, y + 62, 32, K.text); if (s) text(s, x + 12, y + 82, 14, K.mute, B, 400);
   });
@@ -2781,7 +2768,7 @@ document.addEventListener('pointerdown', (e) => {
 function burst(el) {
   if (still()) return;
   const r = (el || $('#sprite')).getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  const cols = theme() ? ['#2f7d52', '#111111', '#b4412f', '#8a8a8a'] : ['#ffb870', '#7ee0b5', '#78c0ff', '#ff7a9a', '#ffe27a'];
+  const cols = ['#2f7d52', '#111111', '#b4412f', '#8a8a8a'];
   for (let i = 0; i < 28; i++) {
     const p = document.createElement('i'), a = Math.random() * Math.PI * 2, v = 70 + Math.random() * 140;
     p.className = 'cf'; p.style.cssText = `left:${cx}px;top:${cy}px;background:${cols[i % cols.length]};--x:${Math.cos(a) * v}px;--y:${Math.sin(a) * v - 70}px;--r:${Math.random() * 720 - 360}deg`;
@@ -3099,7 +3086,7 @@ stravaLast();
 
 /* ---------- start ---------- */
 document.body.classList.add('intro'); setTimeout(() => document.body.classList.remove('intro'), 1600);
-setLogo(); $('#theme').value = theme() ? 'clean' : 'pixel';
+setLogo();
 fillLookSelects(); fillProfile(); applyLayout();
 $('#add [name=date]').value = todayStr();
 if (!getSbConfig().url) toggleSettings(true);
