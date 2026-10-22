@@ -4,10 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#fafafa">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Emric"><meta name="format-detection" content="telephone=no">
 <title>Emric: AI running coach</title>
-<script>try{if(localStorage.getItem('pp.theme')==='pixel'){document.documentElement.classList.remove('clean');var m=document.querySelector('meta[name=theme-color]');if(m)m.content='#1f1c40'}else{document.documentElement.classList.add('clean')}}catch(e){document.documentElement.classList.add('clean')}</script>
 <script>/* hard reload (Ctrl+Shift+R style) once per fresh open: clear the HTTP cache and service-worker caches, then reload */
 (function(){if(sessionStorage.getItem('pp.hardreload')==='1')return;sessionStorage.setItem('pp.hardreload','1');
 function go(){location.reload(true)}
@@ -28,55 +27,51 @@ document.addEventListener('focusout',function(){setTimeout(function(){if(!txt(do
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#14122b;--night:#1f1c40;--panel:#2b2759;--panel2:#38337a;--peach:#ffb870;--mint:#7ee0b5;--sky:#78c0ff;--berry:#ff7a9a;--text:#f1ecff;--mute:#b3addf;--disp:'Pixelify Sans','Courier New',monospace}
+:root{--ink:#111;--night:#fafafa;--panel:#fff;--panel2:#f1f1f1;--peach:#111;--mint:#2f7d52;--sky:#111;--berry:#b4412f;--text:#111;--mute:#595959;--disp:'Atkinson Hyperlegible',system-ui,sans-serif;color-scheme:light}
 *{box-sizing:border-box}
-body{margin:0;background:var(--night);color:var(--text);font:16px/1.5 'Atkinson Hyperlegible',system-ui,sans-serif;background-image:linear-gradient(#242148 2px,transparent 2px),linear-gradient(90deg,#242148 2px,transparent 2px);background-size:32px 32px}
+body{margin:0;background:var(--night);color:var(--text);font:16px/1.5 'Atkinson Hyperlegible',system-ui,sans-serif;background-image:linear-gradient(#e6e6e6 1px,transparent 1px),linear-gradient(90deg,#e6e6e6 1px,transparent 1px);background-size:32px 32px}
 main{max-width:1100px;margin:auto;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:grid;gap:clamp(18px,2.5vw,28px)}
-h1,h2{font-family:var(--disp);font-weight:600;margin:0}h1{font-size:1.9rem;display:flex;align-items:center;gap:12px}h2{font-size:1.25rem}
-svg{image-rendering:pixelated}
-.px{background:var(--panel);border:4px solid var(--ink);box-shadow:5px 5px 0 #0b0a1d,inset 0 0 0 2px #433e8f;padding:clamp(16px,2.2vw,20px);border-radius:14px}
-.ok{border-color:var(--mint)}.warn{border-color:var(--berry)}.hot{border-color:var(--peach)}
+h1,h2{font-family:var(--disp);font-weight:700;letter-spacing:-.01em;margin:0}h1{font-size:1.9rem;display:flex;align-items:center;gap:12px}h2{font-size:1.25rem}
+.px{background:var(--panel);border:1px solid #111;border-radius:12px;box-shadow:none;padding:clamp(16px,2.2vw,20px)}
+.ok{border-color:var(--mint)}.warn{border-color:var(--berry);border-style:dashed;border-width:2px}.hot{border-color:var(--peach)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.between{justify-content:space-between}
 .mute{color:var(--mute)}.sm{font-size:.875rem}.xs{font-size:.75rem}.center{text-align:center}.pre{white-space:pre-line}
 .c-mint{color:var(--mint)}.c-sky{color:var(--sky)}.c-berry{color:var(--berry)}.d{font-family:var(--disp);font-weight:600}
-.btn{font:600 1rem var(--disp);color:var(--ink);background:var(--peach);border:4px solid var(--ink);padding:6px 12px;cursor:pointer;user-select:none;--sh:#b86a2c;box-shadow:0 4px 0 var(--sh);transition:transform .1s}
-.btn.sky{background:var(--sky);--sh:#3b7fb8}.btn.mint{background:var(--mint);--sh:#3d9c78}
-.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 0 var(--sh)}
-.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--sh)}
+.btn{font:600 1rem var(--disp);color:#fff;background:#111;border:1px solid #111;border-radius:999px;padding:6px 12px;cursor:pointer;user-select:none;box-shadow:none;transition:opacity .1s}
+.btn.sky{background:#fff;color:#111}.btn.mint{background:#e3f1e8;color:#1f5c3a;border-color:#2f7d52}
+.btn:hover:not(:disabled){opacity:.8}
+.btn:active:not(:disabled){opacity:.65}
 .btn:disabled{opacity:.6;cursor:not-allowed}
-.btn:focus-within,:focus-visible{outline:3px solid var(--peach);outline-offset:2px}
+.btn:focus-within,:focus-visible{outline:3px solid #111;outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.chip{font:600 .875rem var(--disp);border:2px solid var(--ink);background:var(--panel2);color:var(--text);padding:2px 8px;cursor:pointer}
-.chip[aria-pressed=true]{background:var(--sky);color:var(--ink)}
-.field{background:var(--ink);border:4px solid var(--ink);color:var(--text);padding:6px 12px;font:inherit;min-width:0}
-.field::placeholder{color:var(--mute)}.field:focus{outline:none;border-color:var(--sky)}
+.chip{font:600 .875rem var(--disp);border:1px solid #111;border-radius:999px;background:#fff;color:var(--text);padding:2px 8px;cursor:pointer}
+.chip[aria-pressed=true]{background:#111;color:#fff}
+.field{background:#fff;color:#111;border:1px solid #111;border-radius:8px;padding:6px 12px;font:inherit;min-width:0}
+.field::placeholder{color:var(--mute)}.field:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.1)}
 .grow{flex:1;min-width:12rem}
 .coachbox{display:grid;gap:16px;grid-template-columns:auto 1fr}
-.sprite{position:relative;background:var(--panel2);border:4px solid var(--ink);padding:8px;align-self:start;justify-self:center;line-height:0}
-.bob{animation:bob .5s steps(2) infinite}
+.sprite{position:relative;background:#f7f7f7;border:1px solid #111;border-radius:12px;padding:8px;align-self:start;justify-self:center;line-height:0}
+.bob{animation:bobS .6s ease-in-out infinite}
 .say{font:600 1.25rem var(--disp);min-height:3.5rem;margin:0 0 12px}
-.caret{display:inline-block;width:.6em;height:1em;margin-left:2px;background:var(--peach);vertical-align:-2px;animation:blink 1s steps(2) infinite}
-@keyframes blink{50%{opacity:0}}@keyframes bob{50%{transform:translateY(-6px)}}
+.caret{display:inline-block;width:.6em;height:1em;margin-left:2px;background:#111;vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}@keyframes bobS{50%{transform:translateY(-5px) rotate(-1.5deg)}}
 .two{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .week{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .week .px{padding:8px}
 .tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .tile{display:flex;align-items:center;gap:12px;padding:12px}.big{font:600 1.5rem/1 var(--disp)}
-.badge{font:600 1rem var(--disp);background:var(--peach);color:var(--ink);border:2px solid var(--ink);padding:0 8px}
+.badge{font:600 1rem var(--disp);background:#111;color:#fff;border:0;border-radius:999px;padding:0 10px}
 dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.875rem}dt{color:var(--mute)}dd{margin:0}
 ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
-.bars{display:flex;align-items:end;gap:6px;height:128px}.bars i{flex:1;border:4px solid var(--ink);cursor:pointer;position:relative;touch-action:manipulation;user-select:none}
-.bars i:not(:last-child){border-right-color:#0b0a1d}
-.clean .bars i:not(:last-child){border-right-color:#111}
-.bars i.sel{outline:3px solid var(--peach);outline-offset:2px;filter:brightness(1.25)}
-.clean .bars i.sel{outline:2px solid #111;filter:none}
+.bars{display:flex;align-items:end;gap:6px;height:128px}.bars i{flex:1;border:1px solid #111;border-radius:3px;cursor:pointer;position:relative;touch-action:manipulation;user-select:none}
+.bars i.sel{outline:2px solid #111;filter:none}
 #barval,#recbarval{min-height:1.5em}
 .scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.875rem}th,td{padding:8px;text-align:left}
-th{background:var(--ink);font-family:var(--disp)}th button{all:unset;cursor:pointer;font:inherit}th button:focus-visible{outline:3px solid var(--peach)}
+th{background:#111;color:#fff;font-family:var(--disp)}th button{all:unset;cursor:pointer;font:inherit}th button:focus-visible{outline:3px solid #fff}
 .r{text-align:right;font-variant-numeric:tabular-nums}.nw{white-space:nowrap}
-tbody tr:nth-child(odd){background:rgba(31,28,64,.6)}tbody tr:hover{background:var(--panel2)}
+tbody tr:nth-child(odd){background:rgba(0,0,0,.04)}tbody tr:hover{background:var(--panel2)}
 .tt{max-width:18rem}.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .del{background:none;border:0;color:var(--berry);font:600 1rem var(--disp);cursor:pointer}
 .edt{background:none;border:0;color:var(--sky);font:600 1rem var(--disp);cursor:pointer;margin-right:2px}
@@ -92,26 +87,28 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
 .fold>summary::-webkit-details-marker{display:none}
 .fold>summary::before{content:'\25B8\2002'}
 .fold[open]>summary{margin-bottom:12px}
-.wcard{position:relative;display:grid;gap:4px;padding:10px 44px 10px 12px;background:var(--panel2);border:2px solid var(--ink)}
+.wcard{position:relative;display:grid;gap:4px;padding:10px 44px 10px 12px;background:var(--panel2);border:1px solid #111;border-radius:10px}
 .wcard .del{position:absolute;top:2px;right:4px;font-size:1.25rem;padding:10px}
 .wcard .edt{position:absolute;top:2px;right:48px;font-size:1.15rem;padding:10px;line-height:1}
 .tabs{display:flex;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--night);padding:8px 0;margin:0}
-.tab{flex:1;font:600 1rem var(--disp);color:var(--text);background:var(--panel2);border:4px solid var(--ink);padding:10px 8px;cursor:pointer}
-.tab[aria-selected=true]{background:var(--peach);color:var(--ink)}
-.st{font:600 .8125rem var(--disp);padding:0 6px;border:2px solid var(--ink);color:var(--ink)}
-.st-done{background:var(--mint)}.st-changed{background:var(--peach)}.st-missed{background:var(--berry)}
-.c-peach{color:var(--peach)}
-.chatlog{display:grid;gap:10px;max-height:340px;overflow-y:auto;padding:4px}
-.bub{max-width:90%;padding:10px 12px;border:2px solid var(--ink);font-size:.9375rem;white-space:pre-line}
-.bub.me{justify-self:end;background:var(--sky);color:var(--ink)}
+.tab{flex:1;font:600 1rem var(--disp);color:var(--text);background:#fff;border:1px solid #111;border-radius:999px;padding:10px 8px;cursor:pointer}
+.tab[aria-selected=true]{background:#111;color:#fff}
+.st{font:600 .8125rem var(--disp);padding:0 8px;border:1px solid #111;border-radius:999px;color:#111;background:#fff}
+.st-done{background:#e3f1e8;color:#1f5c3a;border-color:#2f7d52}.st-changed{background:#d9d9d9}.st-missed{background:#f8e6e2;color:#8f2f20;border-color:#b4412f}
+.c-peach{color:#111}
+.chatlog{display:grid;gap:10px;max-height:340px;overflow-y:auto;padding:4px;scroll-behavior:smooth}
+.bubtime{display:block;margin-top:6px;font-size:.6875rem;opacity:.75}
+.chatnew{justify-self:center;cursor:pointer}
+.bub{max-width:90%;padding:10px 12px;border:1px solid #111;border-radius:10px;font-size:.9375rem;white-space:pre-line}
+.bub.me{justify-self:end;background:#111;color:#fff}
 .bub.coach{justify-self:start;background:var(--panel2)}
 .bub .chg{margin-top:8px;padding:8px;background:var(--ink);font-size:.8125rem;white-space:normal;display:grid;gap:6px}
-.meter{height:24px;background:var(--ink);border:4px solid var(--ink)}.meter i{display:block;height:100%;background:var(--mint)}
-.upd{padding:12px;background:var(--panel2);border:2px solid var(--ink);display:grid;gap:2px}
-.upd-pending{border-color:var(--peach)}.upd-applied{border-color:var(--mint)}.upd-offer{border-color:var(--sky)}
+.meter{height:24px;background:#fff;border:1px solid #111;border-radius:999px;overflow:hidden}.meter i{display:block;height:100%;background:var(--mint)}
+.upd{padding:12px;background:var(--panel2);border:1px solid #111;border-radius:10px;display:grid;gap:2px}
+.upd-pending{border-style:dashed;border-color:var(--peach)}.upd-applied{border-color:var(--mint)}.upd-offer{border-color:var(--sky)}
 .uline{font-size:1rem;padding:2px 0}.arrow{color:var(--peach);font-weight:700;padding:0 6px}
-.st-keep{background:var(--panel);color:var(--text)}
-.bub .upd{margin-top:8px;background:var(--ink)}
+.st-keep{background:#fff;color:#111}
+.bub .upd{margin-top:8px;background:#fff}
 @media(max-width:640px),(pointer:coarse) and (max-height:500px){
   body{line-height:1.6}
   main{gap:20px;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
@@ -142,59 +139,33 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
   .chatlog{max-height:55vh}
 }
 .recap-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.rstat{background:var(--panel2);border:2px solid var(--ink);padding:8px 10px;display:grid;gap:2px}.rstat .big{font-size:1.25rem}
+.rstat{background:var(--panel2);border:1px solid #111;border-radius:10px;padding:8px 10px;display:grid;gap:2px}.rstat .big{font-size:1.25rem}
 .dlabels{display:flex;gap:6px;margin-top:4px}.dlabels span{flex:1;text-align:center}
 @media(max-width:640px),(pointer:coarse) and (max-height:500px){.recap-grid{grid-template-columns:1fr 1fr}}
-/* clean black and white look (no pixel art), chosen in Settings > Coach style */
-html.clean{--ink:#111;--night:#fff;--panel:#fff;--panel2:#f1f1f1;--peach:#111;--mint:#2f7d52;--sky:#111;--berry:#b4412f;--text:#111;--mute:#595959;--disp:'Atkinson Hyperlegible',system-ui,sans-serif;color-scheme:light}
-.clean body{background:#fff;background-image:none}
-.clean h1,.clean h2{font-weight:700;letter-spacing:-.01em}
-.clean .px{border:1px solid #111;border-radius:12px;box-shadow:none}
-.clean .warn{border-style:dashed;border-width:2px}
-.clean .btn{color:#fff;background:#111;border:1px solid #111;border-radius:999px;box-shadow:none;transition:opacity .1s}
-.clean .btn.sky{background:#fff;color:#111}
-.clean .btn.mint{background:#e3f1e8;color:#1f5c3a;border-color:#2f7d52}
-.clean .btn:hover:not(:disabled){transform:none;box-shadow:none;opacity:.8}
-.clean .btn:active:not(:disabled){transform:none;box-shadow:none;opacity:.65}
-.clean .chip{border:1px solid #111;border-radius:999px;background:#fff}
-.clean .chip[aria-pressed=true]{background:#111;color:#fff}
-.clean .field{background:#fff;color:#111;border:1px solid #111;border-radius:8px}
-.clean .field:focus{border-color:#111;outline:2px solid #111;outline-offset:1px}
-.clean .sprite{background:#f7f7f7;border:1px solid #111;border-radius:12px}
-.clean .badge{background:#111;color:#fff;border:0;border-radius:999px;padding:0 10px}
-.clean .tab{border:1px solid #111;border-radius:999px;background:#fff}
-.clean .tab[aria-selected=true]{background:#111;color:#fff}
-.clean .st{border:1px solid #111;border-radius:999px;background:#fff;color:#111;padding:0 8px}
-.clean .st-done{background:#e3f1e8;color:#1f5c3a;border-color:#2f7d52}.clean .st-changed{background:#d9d9d9}.clean .st-missed{background:#f8e6e2;color:#8f2f20;border-color:#b4412f}.clean .st-keep{background:#fff;color:#111}
-.clean th{background:#111;color:#fff}
-.clean tbody tr:nth-child(odd){background:rgba(0,0,0,.04)}
-.clean .wcard,.clean .upd,.clean .bub,.clean .rstat{border:1px solid #111;border-radius:10px}
-.clean .upd-pending{border-style:dashed}
-.clean .bub.me{background:#111;color:#fff}
-.clean .bub .upd{background:#fff}
-.clean .meter{background:#fff;border:1px solid #111;border-radius:999px;overflow:hidden}
-.clean .bars i{border:1px solid #111;border-radius:3px}
-.clean .c-sky,.clean .c-peach{color:#111}
-.clean .caret{background:#111}
+/* black-and-white look helpers */
+.tab{border:1px solid #111;border-radius:999px;background:#fff}
+.tab[aria-selected=true]{background:#111;color:#fff}
+.st{border:1px solid #111;border-radius:999px;background:#fff;color:#111;padding:0 8px}
+.st-done{background:#e3f1e8;color:#1f5c3a;border-color:#2f7d52}.st-changed{background:#d9d9d9}.st-missed{background:#f8e6e2;color:#8f2f20;border-color:#b4412f}.st-keep{background:#fff;color:#111}
+.wcard,.upd,.bub,.fx{border-radius:10px}
+.upd-pending{border-style:dashed}
+.bub.me{background:#111;color:#fff}
+.bub .upd{background:#fff}
+.meter{background:#fff;border:1px solid #111;border-radius:999px;overflow:hidden}
+.c-sky,.c-peach{color:#111}
 .dmenu{position:relative}.dmenu>summary{display:block;list-style:none;text-align:center}.dmenu>summary::-webkit-details-marker{display:none}
-.dpop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;display:grid;gap:8px;padding:12px;background:var(--panel);border:4px solid var(--ink);box-shadow:4px 4px 0 #0b0a1d;min-width:13rem}
+.dpop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;display:grid;gap:8px;padding:12px;background:var(--panel);border:1px solid #111;border-radius:12px;box-shadow:none;min-width:13rem}
 .dpop .btn{text-align:center}
-.clean .dpop{border:1px solid #111;border-radius:12px;box-shadow:none}
 @media(max-width:640px),(pointer:coarse) and (max-height:500px){.dmenu{flex:1 1 40%}.dpop{position:static;margin-top:8px;box-shadow:none}}
-.sdot{position:relative;flex:none;width:14px;height:14px;min-height:0;padding:0;border-radius:50%;border:2px solid var(--ink);background:var(--mute);cursor:pointer}
+.sdot{position:relative;flex:none;width:14px;height:14px;min-height:0;padding:0;border-radius:50%;border:1px solid #111;background:var(--mute);cursor:pointer}
 .sdot::after{content:'';position:absolute;inset:-14px}
 .sdot[data-s=ok]{background:var(--mint)}.sdot[data-s=bad]{background:var(--berry)}.sdot[data-s=off]{background:var(--mute)}
 .sdot[data-s=sync]{background:var(--peach);animation:pulse 1s steps(2) infinite}
-.clean .sdot{border:1px solid #111}
 @keyframes pulse{50%{opacity:.35}}
 .cw{display:inline-block}
-.idle{animation:breathe 3.2s steps(2) infinite}
-@keyframes breathe{50%{transform:translateY(-2px)}}
-.sprite .bob{animation-duration:.52s}
-.clean .idle{animation:breatheS 3.6s ease-in-out infinite}
+.idle{animation:breatheS 3.6s ease-in-out infinite}
 @keyframes breatheS{50%{transform:translateY(-3px)}}
-.clean .sprite .bob{animation:bobS .6s ease-in-out infinite}
-@keyframes bobS{50%{transform:translateY(-5px) rotate(-1.5deg)}}
+.sprite .bob{animation:bobS .6s ease-in-out infinite}
 .fx{position:absolute;top:0;right:3px;font:700 1.1rem/1 var(--disp);color:var(--peach);pointer-events:none}
 .fx[data-k=work],.fx[data-k=spark]{animation:pulse .8s steps(2) infinite}
 .fx[data-k=zzz]{animation:zzz 2.4s linear infinite}
@@ -225,9 +196,9 @@ html.clean{--ink:#111;--night:#fff;--panel:#fff;--panel2:#f1f1f1;--peach:#111;--
 .rip{position:absolute;border-radius:50%;background:currentColor;opacity:.2;transform:scale(0);animation:mRip .55s ease-out forwards;pointer-events:none}
 .tab:active,.chip:active{transform:scale(.96)}
 .chip[aria-pressed=true]{animation:mTick .25s ease-out}
-.field:focus{box-shadow:0 0 0 3px rgba(120,192,255,.22)}.clean .field:focus{box-shadow:0 0 0 3px rgba(0,0,0,.1)}
+.field:focus{box-shadow:0 0 0 3px rgba(0,0,0,.1)}
 .fold>summary::before{display:inline-block;transition:transform .2s ease}.fold[open]>summary::before{transform:rotate(90deg)}
-.fold>summary:hover{color:var(--peach)}.clean .fold>summary:hover{color:#2f7d52}
+.fold>summary:hover{color:#2f7d52}
 .week .px{transition:transform .18s ease}.week .px:hover{transform:translateY(-2px)}
 .bars i{transition:filter .2s}.bars i:hover{filter:brightness(1.2)}
 tbody tr{transition:background-color .15s}
@@ -254,7 +225,7 @@ details[open]>:not(summary){animation:mDrop .28s ease-out}
 /* one gentle idle touch: the streak flame */
 .tiles>:first-child svg{animation:mFlame 2.8s ease-in-out infinite;transform-origin:50% 90%}
 #sprite{cursor:pointer}#sprite.hop{animation:mHop .6s ease-out}
-.cf{position:fixed;width:9px;height:9px;pointer-events:none;z-index:60;animation:mConf 1.05s cubic-bezier(.2,.7,.3,1) forwards}.clean .cf{border-radius:50%}
+.cf{position:fixed;width:9px;height:9px;border-radius:50%;pointer-events:none;z-index:60;animation:mConf 1.05s cubic-bezier(.2,.7,.3,1) forwards}
 }
 
 /* ---------- device-aware layer (classes set by the detection script in <head>) ---------- */
@@ -272,15 +243,13 @@ html.lite *,html.lite *::before,html.lite *::after{animation:none!important}
   .btn{-webkit-touch-callout:none}
 }
 @media(hover:none){
-  .btn:hover:not(:disabled){transform:none;box-shadow:0 4px 0 var(--sh)}
-  .clean .btn:hover:not(:disabled){opacity:1;box-shadow:none}
+  .btn:hover:not(:disabled){opacity:1}
   .week .px:hover{transform:none}.bars i:hover{filter:none}
   tbody tr:hover{background:inherit}.fold>summary:hover{color:inherit}
 }
 html.ios input[type=date].field{-webkit-appearance:none;appearance:none;min-height:44px;text-align:left}
 /* phones, portrait: tab bar at the thumb, hidden while the keyboard is up */
-html.d-phone.portrait .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;margin:0;border-top:4px solid var(--ink);padding:8px max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left))}
-html.clean.d-phone.portrait .tabs{border-top:1px solid #111}
+html.d-phone.portrait .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;margin:0;border-top:1px solid #111;padding:8px max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left))}
 html.d-phone.portrait.kb .tabs{display:none}
 html.d-phone.portrait main{padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 html.d-phone.portrait.kb main{padding-bottom:24px}
@@ -294,23 +263,19 @@ html.d-phone.landscape main{gap:16px}
 html.d-tablet main{max-width:960px}
 html.d-tablet .tabs{top:env(safe-area-inset-top,0px)}
 /* gate overlay: Emric requires an account before the app can be used */
-#gate{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(255,255,255,.9);overflow-y:auto}
-#legalmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(255,255,255,.92);overflow-y:auto}
-#editmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(255,255,255,.92);overflow-y:auto}
-html:not(.clean) #gate,html:not(.clean) #legalmodal,html:not(.clean) #editmodal{background:rgba(20,18,40,.72)}
+#gate{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.9);overflow-y:auto}
+#legalmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.92);overflow-y:auto}
+#editmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.92);overflow-y:auto}
 .gatebox{width:min(430px,100%);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-html:not(.clean) .gatebox{box-shadow:0 12px 40px rgba(0,0,0,.45)}
 /* edit-workout modal: clean labelled two-column form */
 #editmodal .gatebox{width:min(560px,100%)}
 #editform{display:grid;gap:10px 12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-#editform label.stack.sm{gap:4px;font:600 .8125rem var(--disp);color:var(--mute)}
-html.clean #editform label.stack.sm{color:#444}
+#editform label.stack.sm{gap:4px;font:600 .8125rem var(--disp);color:#444}
 #editform .wide{grid-column:1/-1}
 #editsavebar{justify-content:flex-end}
 #editmodal .btn{min-width:112px}
 @media(max-width:640px),(pointer:coarse) and (max-height:500px){#editform{grid-template-columns:1fr;gap:14px}}
 .legalbox{max-height:45vh;max-height:45dvh;overflow-y:auto;border:1px solid #d8d8de;border-radius:8px;padding:10px 12px;font-size:.78rem;line-height:1.45}
-html:not(.clean) .legalbox{border-color:#4a4670}
 .legalbox h1,.legalbox h2,.legalbox h3{font-size:.9rem;margin:10px 0 4px}
 .legalbox p,.legalbox li{margin:4px 0}
 .legalbox ul{margin:4px 0 4px 18px;padding:0}
@@ -326,8 +291,7 @@ html.gated #legalfloat{display:flex}
 #ckbanner{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:140;max-width:520px;margin-inline:auto}
 html.d-phone.portrait #ckbanner{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 html.d-phone.portrait.kb #ckbanner{display:none}
-#ckbanner .gatebox{padding:14px 16px;background:var(--panel);border:2px solid var(--ink);color:var(--text)}
-html.clean #ckbanner .gatebox{background:#fff;border-color:#111;color:#111}
+#ckbanner .gatebox{padding:14px 16px;background:#fff;border:1px solid #111;color:#111}
 /* keep the bottom of the page clear while the cookie banner is up (footer links stay reachable) */
 body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 </style>
@@ -540,7 +504,6 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 
     <details class="fold sec"><summary>Coach &amp; style</summary><div class="stack">
       <div class="two">
-        <label class="stack sm">Look<select id="theme" class="field"><option value="pixel">Pixel art (colour)</option><option value="clean">Clean (minimal B&amp;W)</option></select></label>
         <label class="stack sm">Weekly streak goal (workouts / week)<input id="goal" class="field" type="number" min="1" max="14"></label>
       </div>
       <label class="stack sm" style="max-width:20rem">Units<select id="units" class="field"><option value="km">Kilometres (km)</option><option value="mi">Miles (mi)</option></select></label>
@@ -648,7 +611,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
     <div class="row between"><h2>Ask your coach</h2><button class="chip" id="chatclear">Clear chat</button></div>
     <div id="chatlog" class="chatlog" aria-live="polite"></div>
     <div class="row" id="chatchips"><button class="chip" data-q="Why is today's session what it is?">Why today's session?</button><button class="chip" data-q="Can I swap tomorrow's session?">Swap tomorrow?</button><button class="chip" data-q="Make this week a bit easier.">Easier week</button><button class="chip" data-q="My legs feel heavy. What should I do?">Heavy legs</button></div>
-    <div class="row"><input id="chatin" enterkeyhint="send" class="field grow" maxlength="300" aria-label="Message your coach" placeholder="Ask about your plan or how you feel…"><button class="btn" id="chatsend">Send</button></div>
+    <div class="row"><textarea id="chatin" rows="1" enterkeyhint="send" class="field grow" maxlength="300" aria-label="Message your coach" placeholder="Ask about your plan or how you feel…"></textarea><button class="btn" id="chatsend">Send</button></div>
     <p id="chaterr" class="c-berry sm" role="alert" style="margin:0" hidden></p>
   </section>
   </div>
@@ -736,13 +699,12 @@ const fmtPaceUnit = (secPerKm) => fmtPace(secPerKm == null ? null : (uMi() ? sec
 const fmtKmRange = (lo, hi) => `${Math.round(convKm(lo) * 10) / 10}-${Math.round(convKm(hi) * 10) / 10} ${unitLabel()}`;
 const paceBand = (band) => String(band || '').split('-').map((x) => { const p = parsePace(x); return p == null ? x : fmtPaceUnit(p); }).join('-');
 
-/* ---------- look: pixel art (colour) or clean (black and white) ---------- */
-const theme = () => document.documentElement.classList.contains('clean');
+/* ---------- look: black and white (drawn coach) ---------- */
 const CLEAN_DEFAULT = { hat: 'None', outfit: 'Gym tank' };
 const lookClean = (() => { try { return { ...CLEAN_DEFAULT, ...JSON.parse(lsGet('pp.lookc', '{}')) }; } catch { return { ...CLEAN_DEFAULT }; } })();
-const curLook = () => (theme() ? lookClean : look);   // each look keeps its own hat and outfit
-const COL = () => (theme() ? { hi: '#111111', lo: '#8f8f8f', empty: '#e4e4e4', line: '#111111', dot: '#fff', dotEdge: '#111111' } : { hi: '#ffb870', lo: '#7ee0b5', empty: '#38337a', line: '#7ee0b5', dot: '#ffb870', dotEdge: '#14122b' });
-// Clean look: a drawn (vector) coach in the style of a thick-outlined doodle, with the same hats and outfits as the pixel coach.
+const curLook = () => lookClean;   // the drawn coach keeps its own hat and outfit
+const COL = () => ({ hi: '#111111', lo: '#8f8f8f', empty: '#e4e4e4', line: '#111111', dot: '#fff', dotEdge: '#111111' });
+// A drawn (vector) coach in the style of a thick-outlined doodle.
 const coachTop = (lk) => ({ Wizard: -38, Party: -41, Chef: -34, Crown: -22, Viking: -20, Cap: -18 }[lk.hat] ?? -6);
 const coachRatio = (lk) => (212 - coachTop(lk)) / 190;
 function drawnCoach(lk, w, ex) {
@@ -801,7 +763,8 @@ function drawnCoach(lk, w, ex) {
   const top = coachTop(lk);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${Math.round(w * coachRatio(lk))}" viewBox="0 ${top} 190 ${212 - top}" role="img" aria-hidden="true">${p.join('')}</svg>`;
 }
-// Small drawn icons for the stat tiles in the clean look (the pixel look keeps its pixel icons).
+// Small drawn icons for the stat tiles.
+const FLAME = 'flame', SHOE = 'shoe', MOON = 'moon';
 function drawnIcon(icon) {
   const sw = 'stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"';
   const body = icon === FLAME
@@ -812,18 +775,8 @@ function drawnIcon(icon) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">${body}</svg>`;
 }
 const svgImage = (svg) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
-const coachArt = (s, ex) => (theme() ? drawnCoach(lookClean, Math.round(s * 26), ex) : px(coachGrid(look, ex), s));
-const setLogo = () => { $('#logo').innerHTML = (theme() ? drawnCoach(CLEAN_DEFAULT, 34) : px(coachGrid(DEFAULT_LOOK), 2)) + ' Emric'; };
-function applyTheme(t, persist) {
-  const cl = t === 'clean';
-  document.documentElement.classList.toggle('clean', cl);
-  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = cl ? '#ffffff' : '#1f1c40';
-  $('#theme').value = cl ? 'clean' : 'pixel';
-  lsSet('pp.theme', cl ? 'clean' : 'pixel'); if (persist) setPref('theme', cl ? 'clean' : 'pixel');
-  $('#hat').value = curLook().hat; $('#outfit').value = curLook().outfit;
-  setLogo(); drawCoach(); renderDash();
-}
-$('#theme').onchange = (e) => applyTheme(e.target.value, true);
+const coachArt = (s, ex) => drawnCoach(lookClean, Math.round(s * 26), ex);
+const setLogo = () => { $('#logo').innerHTML = drawnCoach(CLEAN_DEFAULT, 34) + ' Emric'; };
 
 /* ---------- phone layout helpers ---------- */
 const mq = matchMedia('(max-width:640px),(pointer:coarse) and (max-height:500px)');
@@ -974,70 +927,9 @@ function summarize(ws, today) {
   };
 }
 
-/* ---------- pixel sprites ---------- */
-const PAL = { k: '#14122b', s: '#ffcfa0', h: '#7a4a2b', R: '#ff7a9a', w: '#f1ecff', b: '#78c0ff', o: '#ffb870', y: '#ffe27a', r: '#ff5a6e' };
-const FLAME = ['...r....', '..rr....', '..rro.r.', '.rrooorr', '.roooyor', '.rooyyor', '..rooor.', '...rrr..'];
-const SHOE = ['........', '........', '..kk....', '..kwk...', '..kwwkkk', '.kwwwwwk', 'kbbbbbbk', 'kkkkkkkk'];
-const MOON = ['..yyyy..', '.yyyk...', 'yyy.....', 'yyy.....', 'yyy.....', 'yyyy...k', '.yyyyyy.', '..yyyy..'];
-const px = (g, s = 4) => { const w = g[0].length; return `<svg width="${w * s}" height="${g.length * s}" viewBox="0 0 ${w} ${g.length}" shape-rendering="crispEdges" aria-hidden="true">${g.map((r, y) => [...r].map((c, x) => PAL[c] ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${PAL[c]}"/>` : '').join('')).join('')}</svg>`; };
-
-/* ---------- coach look: layered pixel sprite (body + outfit + hat) ---------- */
-Object.assign(PAL, { S: '#e2a070', W: '#b9b4e0', B: '#3b7fb8', O: '#b86a2c', Y: '#d9a93a', e: '#c23a52', g: '#7ee0b5', G: '#3d9c78', p: '#9b7bff', P: '#5b3fb3', n: '#2b2759', d: '#9a96c8', D: '#6b67a0' });
-const BASE = ["..........", "..........", "..........", "ssss..hhhh", "ssss..hhhh", "sSss..ssss", ".sss..shhh", ".sSs..swks", ".sss..sRss", ".sSs..skww", ".ssss.sssr", ".ssss.ssss", "ssssssssss", "ssssSsssss", "ssssSssssS", "...sssSSSS", "....sssssS", ".....sSSSS", "......sssS", "......ssss", ".....ssss.", ".....ssss.", ".....ssss.", "....wwwww."];   // left half of each row; the right half is mirrored
-const HATS = {"None": null, "Headband": {"y": 5, "rows": [".....RRRRR"]}, "Cap": {"y": 2, "rows": [".......bbb", "......bbbw", "......bbbb", ".....BBBBB"]}, "Wizard": {"y": 0, "rows": [".........p", "........pp", ".......ppy", "......pppp", ".....PPPPP"]}, "Chef": {"y": 0, "rows": [".....wwwww", ".....wwwww", ".....wWwww", "......wwww", ".....WWWWW"]}, "Crown": {"y": 1, "rows": ["......y..y", "......yyyy", "......yryy", "......YYYY"]}, "Party": {"y": 0, "rows": [".........y", ".........R", "........Ry", ".......RyR", "......yRyR"]}, "Viking": {"y": 0, "rows": ["......w...", "......w...", "......wddd", ".....wdddd", ".....DDDDD"]}};
-const OUTFITS = {
-  'Gym tank': { top: { c: 'b', d: 'B', rows: [13, 18] }, bot: { c: 'p', d: 'P', rows: [19, 21] } },
-  'Shirtless': { top: null, bot: { c: 'y', d: 'Y', rows: [19, 21] } },
-  'Hawaiian': { top: { c: 'g', d: 'G', c2: 'R', pat: 'dots', rows: [13, 18] }, bot: { c: 'o', d: 'O', rows: [19, 21] } },
-  'Tutu': { top: { c: 'R', d: 'r', rows: [13, 15] }, bot: { c: 'R', d: 'r', rows: [19, 19], flare: true } },
-  'Referee': { top: { c: 'w', d: 'W', c2: 'n', pat: 'stripe', rows: [13, 18] }, bot: { c: 'n', d: 'k', rows: [19, 21] } },
-  'Hero': { top: { c: 'r', d: 'e', pat: 'emblem', rows: [13, 18] }, bot: { c: 'b', d: 'B', rows: [19, 21] } },
-};
-const FACE_FLAT = [[10, 8, 's'], [10, 9, 'k'], [10, 10, 'k'], [10, 11, 'k'], [10, 12, 'k'], [10, 13, 's'], [11, 10, 's'], [11, 11, 's']];
-const FACE_SHUT = [[8, 8, 'k'], [8, 9, 'k'], [8, 12, 'k'], [8, 13, 'k']];
-const FACE_FROWN = [[10, 8, 's'], [10, 9, 's'], [10, 10, 'k'], [10, 11, 'k'], [10, 12, 's'], [10, 13, 's'], [11, 9, 'k'], [11, 10, 's'], [11, 11, 's'], [11, 12, 'k']];
-// [row, col, pixel] changes to the default open grin, in the finished (outlined) grid
-const FACES = {
-  happy: [],
-  calm: [[10, 9, 's'], [10, 10, 's'], [10, 11, 's'], [10, 12, 's'], [11, 9, 'k'], [11, 10, 'k'], [11, 11, 'k'], [11, 12, 'k']],
-  blink: FACE_SHUT,
-  cheer: [[8, 8, 'k'], [8, 9, 's'], [8, 12, 's'], [8, 13, 'k'], [9, 7, 'k'], [9, 8, 's'], [9, 9, 'k'], [9, 12, 'k'], [9, 13, 's'], [9, 14, 'k']],
-  think: [[8, 8, 'k'], [8, 9, 'w'], [8, 12, 'k'], [8, 13, 'w'], ...FACE_FLAT],
-  think2: [[8, 8, 'w'], [8, 9, 'k'], [8, 12, 'w'], [8, 13, 'k'], ...FACE_FLAT],
-  sleepy: [...FACE_SHUT, ...FACE_FLAT],
-  sore: [...FACE_SHUT, ...FACE_FROWN],
-  ill: [...FACE_SHUT, ...FACE_FROWN],
-  oops: [[10, 8, 's'], [10, 9, 's'], [10, 10, 'k'], [10, 11, 'k'], [10, 12, 's'], [10, 13, 's']],
-};
-const mirror = (s) => s + [...s].reverse().join('');
-function coachGrid(look, ex) {
-  const W = 20, H = 24, g = Array.from({ length: H }, () => Array(W).fill('.'));
-  const put = (rows, y0) => rows.forEach((s, i) => [...mirror(s)].forEach((c, x) => { if (c !== '.') g[y0 + i][x] = c; }));
-  const paint = (r0, r1, fn) => { for (let y = r0; y <= r1; y++) for (let x = 5; x <= 14; x++) { const c = g[y][x]; if (c === 's' || c === 'S') g[y][x] = fn(c === 'S', x, y); } };
-  put(BASE, 0);
-  const o = OUTFITS[look.outfit] || OUTFITS['Gym tank'], t = o.top, b = o.bot;
-  if (t) paint(t.rows[0], t.rows[1], (sh, x, y) => {
-    if (t.pat === 'emblem' && x >= 9 && x <= 10 && y >= 14 && y <= 15) return 'y';
-    if (t.pat === 'dots' && (x + y) % 4 === 0) return t.c2;
-    if (t.pat === 'stripe' && y % 2 === 0) return t.c2;
-    return sh ? t.d : t.c;
-  });
-  if (b) {
-    paint(b.rows[0], b.rows[1], (sh) => (sh ? b.d : b.c));
-    if (b.flare) for (let y = 19; y <= 20; y++) for (let x = 3; x <= 16; x++) g[y][x] = y === 19 ? b.d : b.c;
-  }
-  const hat = HATS[look.hat]; if (hat) put(hat.rows, hat.y);
-  // pad by 1 and add a dark outline around the whole silhouette
-  const P = Array.from({ length: H + 2 }, (_, y) => Array.from({ length: W + 2 }, (_, x) => (g[y - 1] && g[y - 1][x - 1]) || '.'));
-  const out = P.map((r) => r.slice());
-  for (let y = 0; y < H + 2; y++) for (let x = 0; x < W + 2; x++)
-    if (P[y][x] === '.' && [[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dy, dx]) => ((P[y + dy] && P[y + dy][x + dx]) || '.') !== '.')) out[y][x] = 'k';
-  for (const [r, c, ch] of FACES[ex] || []) out[r][c] = ch;
-  if (ex === 'ill') for (let y = 6; y <= 12; y++) for (let x = 7; x <= 14; x++) { if (out[y][x] === 's') out[y][x] = 'g'; else if (out[y][x] === 'S') out[y][x] = 'G'; }
-  return out.map((r) => r.join(''));
-}
-const LOOK_KEY = 'pp.look', DEFAULT_LOOK = { hat: 'Headband', outfit: 'Gym tank' };
-const look = (() => { try { return { ...DEFAULT_LOOK, ...JSON.parse(lsGet(LOOK_KEY, '{}')) }; } catch { return { ...DEFAULT_LOOK }; } })();
+/* ---------- coach look: hats and outfits for the drawn coach ---------- */
+const HATS = { None: null, Headband: {}, Cap: {}, Wizard: {}, Chef: {}, Crown: {}, Party: {}, Viking: {} };
+const OUTFITS = { 'Gym tank': {}, Shirtless: {}, Hawaiian: {}, Tutu: {}, Referee: {}, Hero: {} };
 /* ---------- coach mood: expressions, idle blink + breathing, and a working animation ---------- */
 let moodFlash = '', moodFlashT = null, blinking = false, scan = 0, moodT = null;
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
@@ -2078,32 +1970,49 @@ function scheduleMidnight() { const ms = new Date().setHours(24, 0, 5, 0) - Date
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') dailyTick(); });
 
 /* ---------- coach chat ---------- */
+const CHAT_CAP = 120;   // messages kept locally and sent to the model as conversation context
 let chat = [], chatBusy = false;
-try { chat = (JSON.parse(lsGet('pp.chat', '[]')) || []).filter((m) => m && (m.r === 'me' || m.r === 'coach') && typeof m.t === 'string').slice(-30); } catch {}
+try { chat = (JSON.parse(lsGet('pp.chat', '[]')) || []).filter((m) => m && (m.r === 'me' || m.r === 'coach') && typeof m.t === 'string').slice(-CHAT_CAP); } catch {}
 let chatClr = +lsGet('pp.chatclr', '0') || 0;   // time the chat was last cleared; older messages stay gone on every device
-const saveChat = () => { lsSet('pp.chat', JSON.stringify(chat.slice(-30))); lsSet('pp.chatclr', String(chatClr)); markDirty(); schedulePush(); };
+const saveChat = () => { lsSet('pp.chat', JSON.stringify(chat.slice(-CHAT_CAP))); lsSet('pp.chatclr', String(chatClr)); markDirty(); schedulePush(); };
+const atLabel = (at) => { try { return new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
 const bubble = (m, ctx) => {
   const u = m.uid ? findUpdate(coachLast && coachLast.data, m.uid) : null;
-  return `<div class="bub ${m.r === 'me' ? 'me' : 'coach'}">${esc(m.t)}${m.uid ? (u && ctx ? updateCard(u, ctx.a, ctx.today) : '<div class="xs mute" style="margin-top:6px">This suggestion is no longer available.</div>') : ''}</div>`;
+  return `<div class="bub ${m.r === 'me' ? 'me' : 'coach'}">${esc(m.t)}${m.at ? `<span class="bubtime" title="${esc(new Date(m.at).toLocaleString())}">${esc(atLabel(m.at))}</span>` : ''}${m.uid ? (u && ctx ? updateCard(u, ctx.a, ctx.today) : '<div class="xs mute" style="margin-top:6px">This suggestion is no longer available.</div>') : ''}</div>`;
 };
-function renderChat() {
+function renderChat(forceBottom) {
   const box = $('#chatlog'), ctx = chat.some((m) => m.uid) && coachLast && coachLast.data ? currentCtx() : null;
-  box.innerHTML = (chat.length ? chat.map((m) => bubble(m, ctx)).join('') : '<p class="mute sm" style="margin:0">Ask why today looks the way it does, or tell me how you feel. I can suggest plan changes, and you decide whether to apply them.</p>') + (chatBusy ? '<div class="bub coach mute">Thinking…</div>' : '');
-  box.scrollTop = box.scrollHeight; $('#chatsend').disabled = chatBusy; moodSync();
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 140;   // only follow new messages when already scrolled to the bottom
+  let html = chat.length ? chat.map((m) => bubble(m, ctx)).join('') : '<p class="mute sm" style="margin:0">Ask why today looks the way it does, or tell me how you feel. I remember what we have talked about, and I can suggest plan changes — you decide whether to apply them.</p>';
+  if (chatBusy) html += '<div class="bub coach mute">Thinking…</div>';
+  else if (!forceBottom && !near && chat.length) html += '<button class="chip chatnew" id="chatjump" type="button">Jump to latest ↓</button>';
+  box.innerHTML = html;
+  if (forceBottom || near || chatBusy) box.scrollTop = box.scrollHeight; else box.scrollTop = Math.min(box.scrollTop, box.scrollHeight);
+  $('#chatsend').disabled = chatBusy; moodSync();
 }
+$('#chatlog').addEventListener('click', (e) => { if (e.target.closest('#chatjump')) { e.stopPropagation(); $('#chatlog').scrollTop = $('#chatlog').scrollHeight; } });
+// Full conversation memory: every stored message goes to the model in order. Coach replies that proposed a
+// plan change are replayed as structured JSON so the model also remembers which days it changed.
+const chatHistory = () => chat.slice(-CHAT_CAP, -1).map((m) => {
+  if (m.r === 'me') return { role: 'user', content: m.t };
+  if (m.uid) {
+    const u = findUpdate(coachLast && coachLast.data, m.uid);
+    if (u) return { role: 'assistant', content: JSON.stringify({ reply: m.t, why: S(u.why), changes: (u.items || []).map((it) => ({ date: it.date, kind: it.to && it.to.kind, km: it.to && it.to.km })) }) };
+  }
+  return { role: 'assistant', content: m.t };
+});
 async function sendChat(text) {
   text = String(text || '').trim().slice(0, 300);
   if (!text || chatBusy) return;
   const key = await getGroqKey(), ce = $('#chaterr'); ce.hidden = true;
   if (!key) { if (!currentUser) $('#authpanel').hidden = false; else toggleSettings(true); ce.textContent = currentUser ? 'The coach key could not be loaded. Open Settings > Account & sync and tap Test connection.' : 'Sign in to chat with your coach.'; ce.hidden = false; return; }
-  chat.push({ r: 'me', t: text, at: Date.now() }); chatBusy = true; saveChat(); renderChat(); $('#chatin').value = '';
+  chat.push({ r: 'me', t: text, at: Date.now() }); chatBusy = true; saveChat(); renderChat(true); $('#chatin').value = ''; autoGrowChat(); $('#chatin').focus({ preventScroll: true });
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 60000);
   try {
     const d = coachLast && coachLast.data, today = todayStr();
     if (d) { rollPlan(d, today); if (safetyCheck(text)) renderResults(d); }   // "my calf hurts" is acted on in every mode
     const a = analyze(ws, today, { feeling, note: text, profile, prev: null }), from = editableFrom(today);
-    const hist = chat.slice(-9, -1).map((m) => (m.r === 'me' ? { role: 'user', content: m.t } : { role: 'assistant', content: JSON.stringify({ reply: m.t, why: '', changes: [] }) }));
-    const raw = await callGroq(key, lsGet('pp.model', DEFAULT_MODEL), JSON.stringify({ context: { ...a.facts, plan_days: d ? planDays(d, a) : [], editable_from: from }, question: text }), ctl, CHAT_SYSTEM, hist);
+    const raw = await callGroq(key, lsGet('pp.model', DEFAULT_MODEL), JSON.stringify({ context: { ...a.facts, plan_days: d ? planDays(d, a) : [], editable_from: from }, question: text }), ctl, CHAT_SYSTEM, chatHistory());
     let j; try { j = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); } catch { j = { reply: raw.trim(), changes: [] }; }
     const reply = S(j.reply).trim() || 'I could not put that into words. Try asking again.'; let uid = '';
     if (d && Array.isArray(j.changes) && j.changes.length) {
@@ -2121,8 +2030,11 @@ async function sendChat(text) {
 $('#chatlog').onclick = uAct;
 $('#chatchips').onclick = (e) => { const b = e.target.closest('[data-q]'); if (b) sendChat(b.dataset.q); };
 $('#chatsend').onclick = () => sendChat($('#chatin').value);
-$('#chatin').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat($('#chatin').value); });
-$('#chatclear').onclick = () => { chat = []; chatClr = Date.now(); saveChat(); renderChat(); };
+// Textarea that grows with the message (up to ~5 lines) instead of hiding typed text behind one row.
+function autoGrowChat() { const el = $('#chatin'); if (!el || el.tagName !== 'TEXTAREA') return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+$('#chatin').addEventListener('input', autoGrowChat);
+$('#chatin').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat($('#chatin').value); } });
+$('#chatclear').onclick = () => { if (!chat.length || confirm('Clear this chat? Your coach forgets everything you have talked about, and the chat is cleared on all your synced devices.')) { chat = []; chatClr = Date.now(); saveChat(); renderChat(); $('#chaterr').hidden = true; } };
 
 /* ---------- progress view ---------- */
 function parseGoal(text) {
@@ -2720,7 +2632,7 @@ function cleanChat(c) {
     const x = { r: m.r, t: m.t.slice(0, 4000), at: nOrNull(m.at) ?? 0 }; if (m.uid) x.uid = String(m.uid);
     if (x.at > clr) seen.set(ckey(x), x);
   }
-  return { msgs: [...seen.values()].sort((p, r) => p.at - r.at).slice(-30), clearedAt: clr };
+  return { msgs: [...seen.values()].sort((p, r) => p.at - r.at).slice(-CHAT_CAP), clearedAt: clr };
 }
 const canon = (s) => ({ v: 2, workouts: (s.workouts || []).map((w) => ({ id: w.id, date: w.date, type: w.type, title: w.title, km: w.km, sec: w.sec, pace: w.pace, hr: w.hr, elev: w.elev, notes: w.notes, ts: w.ts })).sort((a, b) => (a.id < b.id ? -1 : 1)), dead: Object.fromEntries(Object.entries(s.dead || {}).sort()), coach: s.coach || null, profile: cleanProfile(s.profile), prefs: cleanPrefs(s.prefs), chat: cleanChat(s.chat) });
 const snapshot = () => canon({ workouts: ws, dead, coach: coachLast, profile, prefs, chat: { msgs: chat, clearedAt: chatClr } });
@@ -2735,7 +2647,7 @@ function mergeState(a, b) {
   const mp = {}; for (const k of new Set([...Object.keys(a.prefs), ...Object.keys(b.prefs)])) { const x = a.prefs[k], y = b.prefs[k]; mp[k] = !x ? y : !y ? x : y.at > x.at ? y : x; }
   const cl = Math.max(a.chat.clearedAt, b.chat.clearedAt), cm = new Map();
   for (const x of [...a.chat.msgs, ...b.chat.msgs]) if (x.at > cl) cm.set(ckey(x), x);
-  return { workouts: [...m.values()].filter((w) => !(d[w.id] >= w.ts)), dead: d, coach, profile: pr, prefs: mp, chat: { msgs: [...cm.values()].sort((p, r) => p.at - r.at).slice(-30), clearedAt: cl } };
+  return { workouts: [...m.values()].filter((w) => !(d[w.id] >= w.ts)), dead: d, coach, profile: pr, prefs: mp, chat: { msgs: [...cm.values()].sort((p, r) => p.at - r.at).slice(-CHAT_CAP), clearedAt: cl } };
 }
 
 const netErr = (e) => (e instanceof TypeError ? 'Sync failed: network error. Check internet connection.' : 'Sync failed: ' + (e.message || e));
