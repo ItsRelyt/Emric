@@ -443,6 +443,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
           <button class="btn sky" id="stravabtn">Import from Strava, Garmin or Polar</button>
           <button class="btn mint" id="xcsv">Export CSV</button>
           <button class="btn mint" id="xjson">Export JSON</button>
+          <button class="btn" id="dbgbtn" title="Temporary: saves a file describing exactly what is on screen">Debug report (temporary)</button>
         </div>
       </details>
       <button class="btn" id="gear" aria-expanded="false" aria-controls="settings">Settings</button>
@@ -693,6 +694,14 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 <script>
 'use strict';
 const PWA = false;
+/* TEMPORARY debug support: remember recent errors so the debug report can include them */
+const dbgErrors = [];
+(function () {
+  const add = (type, msg) => { dbgErrors.push({ at: new Date().toISOString(), type, msg: String(msg).slice(0, 600) }); if (dbgErrors.length > 80) dbgErrors.shift(); };
+  window.addEventListener('error', (e) => add('error', `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno}:${e.colno})`));
+  window.addEventListener('unhandledrejection', (e) => add('unhandledrejection', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  for (const k of ['error', 'warn']) { const orig = console[k]; console[k] = (...a) => { add('console.' + k, a.map((x) => (x && x.stack) || (typeof x === 'object' ? (() => { try { return JSON.stringify(x); } catch { return String(x); } })() : String(x))).join(' ')); orig.apply(console, a); }; }
+})();
 
 /* ---------- helpers ---------- */
 const $ = (s) => document.querySelector(s);
@@ -1148,7 +1157,7 @@ else growPending = false;
   if (!long) {
     body = `${recent ? `<p class="sm mute" style="margin:0">Recent: ${esc(recent)}</p>` : ''}${vn.volume ? `<p class="sm mute" style="margin:0">${esc(vn.volume)}</p>` : ''}<div class="week">${days.map(cardOf).join('')}</div>`;
   } else {   // one compact Monday-to-Sunday block per week; on phones only the current week is open
-    const bs = weekBounds(days);
+    const bs = weekBounds(days.map((x) => x.date));
     const blocks = bs.map(([a0, a1], w) => { const ch = days.slice(a0, a1); if (!ch.length) return ''; return `<details class="fold"${w === 0 ? ' open' : ''}><summary>${wkSummary(ch)}</summary>${wkFocus(ch) ? `<p class="sm mute" style="margin:0 0 8px">${esc(wkFocus(ch))}</p>` : ''}<div class="week">${ch.map(cardOf).join('')}</div></details>`; }).join('');
     body = `<p class="sm mute" style="margin:0">${L} days until your goal on ${esc(dayLabel(profile.date))}, grouped by week.${d.week.some((x) => x.auto) ? ' Days marked ◆ are a simple outline until the coach plans them.' : ''}</p>${blocks}`;
   }
@@ -3580,6 +3589,95 @@ $('#polardisconnect').onclick = () => {
 };
 polarUi();
 stravaLast();
+
+
+/* ---------- TEMPORARY debug report: exactly what is on screen, plus the app state behind it ---------- */
+function dbgVisible(el) {
+  try {
+    if (!el.isConnected) return false;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  } catch { return false; }
+}
+function dbgOutline() {
+  const lines = []; let count = 0;
+  const walk = (el, depth) => {
+    if (count > 5000 || !dbgVisible(el)) return;
+    const tag = el.tagName.toLowerCase();
+    if (['script', 'style', 'noscript', 'template'].includes(tag)) return;
+    let own = '';
+    el.childNodes.forEach((n) => { if (n.nodeType === 3) own += n.textContent; });
+    own = own.replace(/\s+/g, ' ').trim();
+    const st = [];
+    if (el.disabled) st.push('disabled');
+    for (const k of ['aria-pressed', 'aria-selected', 'aria-expanded', 'aria-label', 'title', 'role']) { const v = el.getAttribute && el.getAttribute(k); if (v) st.push(`${k}=${JSON.stringify(String(v).slice(0, 80))}`); }
+    if (tag === 'details') st.push(el.open ? 'open' : 'closed');
+    if (['input', 'select', 'textarea'].includes(tag)) { if (el.type === 'checkbox' || el.type === 'radio') st.push(`checked=${el.checked}`); else if (el.type !== 'file') st.push(`value=${JSON.stringify(String(el.value).slice(0, 120))}`); if (el.placeholder) st.push(`placeholder=${JSON.stringify(el.placeholder)}`); }
+    const r = el.getBoundingClientRect(), cls = String(el.getAttribute('class') || '').slice(0, 50);
+    lines.push(`${'  '.repeat(depth)}<${tag}${el.id ? '#' + el.id : ''}${cls ? '.' + cls.replace(/\s+/g, '.') : ''}>${own ? ' ' + JSON.stringify(own.slice(0, 400)) : ''}${st.length ? ' [' + st.join(' ') + ']' : ''} @${Math.round(r.left)},${Math.round(r.top + scrollY)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+    count++;
+    if (tag === 'svg') return;
+    for (const c of el.children) walk(c, depth + 1);
+  };
+  walk(document.body, 0);
+  return lines;
+}
+function dbgSections() {
+  const ids = ['gate', 'legalmodal', 'ckbanner', 'editmodal', 'authpanel', 'settings', 'stravapanel', 'msg', 'syncstat', 'tabs', 'p-coach', 'spanbox', 'res', 'planmsg', 'updates', 'ulist', 'today', 'insights', 'weekbox', 'watch', 'chat', 'chatlog', 'empty', 'dash', 'p-prog', 'recap', 'tiles', 'bars', 'prog', 'p-log', 'logform', 'err', 'coachmeta'];
+  return ids.map((id) => {
+    const el = document.getElementById(id);
+    if (!el) return { id, exists: false };
+    const r = el.getBoundingClientRect();
+    return { id, visible: dbgVisible(el), hiddenAttr: !!el.hidden, children: el.childElementCount, textLength: (el.textContent || '').trim().length, size: `${Math.round(r.width)}x${Math.round(r.height)}` };
+  });
+}
+function dbgHiddenWithContent() {
+  return [...document.querySelectorAll('[id]')].filter((el) => !dbgVisible(el) && (el.textContent || '').trim().length > 0).map((el) => `#${el.id} (${(el.textContent || '').trim().length} characters of content, not shown)`).slice(0, 80);
+}
+function buildDebugReport() {
+  const safe = (f) => { try { return f(); } catch (e) { return { reportError: String((e && e.message) || e) }; } };
+  const today = todayStr();
+  const planDay = (x) => ({ date: x.date, dow: dowOf(x.date), kind: x.kind, plan: x.plan, km: x.km, week: x.wk, phase: x.ph, race: !!x.race, outline: !!x.auto, session: x.s || null, note: x.note || null });
+  const d = coachLast && coachLast.data;
+  return {
+    about: 'Debug report from the Emric running-coach web app. "screen" shows exactly what the user could see when the report was made (visible text, then every visible element with its position and state). "hiddenButHasContent" and "sections" show what exists but is NOT displayed. "state" is the data behind the screen, and "errors" are recent JavaScript errors and warnings. The sign-in token and AI key are not included.',
+    madeAt: new Date().toISOString(), today,
+    device: safe(() => ({ userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, viewport: `${innerWidth}x${innerHeight}`, scroll: `${Math.round(scrollX)},${Math.round(scrollY)}`, pageHeight: document.documentElement.scrollHeight, pixelRatio: devicePixelRatio, htmlClasses: String(document.documentElement.className), phoneLayout: isMobile(), standalone: !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches), online: navigator.onLine, url: location.origin + location.pathname })),
+    screen: {
+      visibleText: safe(() => document.body.innerText.slice(0, 60000)),
+      sections: safe(dbgSections),
+      hiddenButHasContent: safe(dbgHiddenWithContent),
+      visibleElements: safe(dbgOutline),
+    },
+    state: {
+      selectedTab: safe(() => tab), planLength: safe(() => profile.span), coachingMode: safe(() => profile.mode), units: safe(() => (uMi() ? 'miles' : 'km')),
+      feelingToday: safe(() => feeling), weeklyStreakGoal: safe(() => getGoal()),
+      profile: safe(() => profile), lookOfCoach: safe(() => ({ ...lookClean })),
+      account: safe(() => ({ signedIn: !!currentUser, aiKeyLoaded: !!cachedGroqKey, syncError: syncErr || null, unsentChanges: dirtyNow(), lastSync: lastSyncAt ? new Date(lastSyncAt).toISOString() : null, busy, chatBusy })),
+      workouts: safe(() => ({ count: ws.length, newest25: [...ws].sort((x, y) => y.date.localeCompare(x.date)).slice(0, 25).map((w) => ({ date: w.date, type: w.type, title: w.title, km: w.km, minutes: Math.round(w.sec / 60), pace: w.pace ? fmtPace(w.pace) : null, hr: w.hr, elev: w.elev })) })),
+      statsShownOnTiles: safe(() => summarize(ws, today)),
+      savedPlan: safe(() => (d ? {
+        savedAt: new Date(coachLast.at).toISOString(), headline: d.headline, watchOut: d.watch_out, dataNotes: d.data_notes, fixes: d.fixes, stale: !!d.stale, expired: !!d.expired,
+        todaySession: (() => { const i = (d.week || []).findIndex((x) => x.date >= today); return i < 0 ? null : todayDetail(d.week[i], analyze(ws, today, { feeling, note: '', profile, prev: null })); })(),
+        insights: d.insights, days: (d.week || []).length, week: (d.week || []).map(planDay), past: (d.past || []).map(planDay),
+        updates: (d.updates || []).slice(0, 10),
+      } : null)),
+      rulesForToday: safe(() => { const a = analyze(ws, today, { feeling, note: '', profile, prev: null }); return { allowedKinds: a.allowed, reasons: a.reasons, weeklyRunTarget: a.target, longRunCap: a.longCap, phase: a.phase, planDaysWanted: a.next7.length }; }),
+      chat: safe(() => chat.slice(-30).map((m) => ({ who: m.r, at: m.at ? new Date(m.at).toISOString() : null, text: m.t, planSuggestion: m.uid || null }))),
+      coachNoteBox: safe(() => $('#note').value),
+    },
+    errors: dbgErrors.slice(),
+  };
+}
+$('#dbgbtn').onclick = () => {
+  try {
+    const rep = buildDebugReport(), blob = new Blob([JSON.stringify(rep, null, 2)], { type: 'application/json' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `emric-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    msg('Debug report saved. Send that file to the AI you are working with.');
+  } catch (e) { msg('Could not make the debug report: ' + ((e && e.message) || e)); }
+};
 
 /* ---------- start ---------- */
 document.body.classList.add('intro'); setTimeout(() => document.body.classList.remove('intro'), 1600);
