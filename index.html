@@ -460,7 +460,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
       <label class="stack sm">Password<span class="row" style="flex-wrap:nowrap"><input id="authpass" class="field grow" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" enterkeyhint="go" placeholder="At least 8 characters"><button class="chip" id="passeye" type="button" aria-pressed="false">Show</button></span></label>
       <label class="stack sm" id="authconfwrap" hidden>Confirm password<input id="authconf" class="field" type="password" autocomplete="new-password"></label>
       <label class="row" id="authtermswrap" style="flex-wrap:nowrap;gap:8px;align-items:flex-start" hidden>
-        <input id="authterms" type="checkbox" style="margin-top:4px;width:18px;height:18px;flex:none" aria-describedby="gtermslink">
+        <input id="authterms" type="checkbox" style="margin-top:4px;width:18px;height:18px;flex:none" aria-describedby="authtermslink">
         <span class="sm">I have read and agree to the <button class="chip" id="authtermslink" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button>.</span>
       </label>
       <div class="row">
@@ -809,7 +809,8 @@ function card(w) {
 }
 function applyLayout() {
   document.querySelectorAll('.sec').forEach((d, i) => { d.open = (i === 0); });
-  drawCoach(); if (coachLast && coachLast.data) renderResults(coachLast.data);
+  drawCoach();
+  try { if (coachLast && coachLast.data) renderResults(coachLast.data); } catch (e) { console.error('render failed', e); }
 }
 mq.addEventListener('change', applyLayout);
 $('#menu').onclick = () => { const o = $('#tools').classList.toggle('open'); $('#menu').setAttribute('aria-expanded', String(o)); };
@@ -1137,7 +1138,7 @@ else growPending = false;
   const phaseOf = (x) => (long && profile.date ? (dn(profile.date) - dn(x.date)) : 99);   // days left before the goal at this day
   const cardOf = (x) => { const s = dayStatus(x, today, a).s, ph = phaseOf(x); const tag = ph < 0 ? '' : ph <= 2 ? 'race tune-up' : ph <= 10 ? 'taper' : ph <= 24 ? 'sharpen' : ph <= 38 ? 'build' : ''; return `<div class="px${x.date === today ? ' is-today' : ''}"><div class="row between"><span class="d c-sky wkday">${esc(dowOf(x.date).slice(0, 2))}${x.date === today ? ' •' : ''}</span><span class="st st-${s}" style="font-size:.625rem;padding:0 6px" title="${esc(dayLabel(x.date))} · ${esc(x.kind)}${names[s] ? ` · ${names[s]}` : ''}">${names[s] ? esc(names[s][0]) : esc((SYM[s] || (tag ? '◆' : '·')))}</span></div><p class="wkplan sm" title="${esc(x.plan)}">${esc(x.plan)}${x.km ? ` <span class="wkkm">(${esc(fmtKm(x.km))})</span>` : ''}</p>${tag ? `<span class="xs mute">${esc(tag)}</span>` : ''}</div>`; };
   const wkTag = (ch) => { const ph = phaseOf(ch[ch.length - 1]); return ph < 0 ? 'Goal week' : ph <= 10 ? 'Taper' : ph <= 24 ? 'Sharpen' : ph <= 38 ? 'Build' : 'Base'; };
-  const wkSummary = (ch) => { const km = r1(ch.reduce((s, x) => s + (RUNKINDS.includes(x.kind) ? x.km || 0 : 0), 0)); return `<span class="d">${esc(wkTag(ch))} · ${esc(shortDate(ch[0].date))}–${esc(shortDate(ch[ch.length - 1].date))}</span>${km ? ` <span class="mute sm">· ${esc(fmtKm(km))} km</span>` : ''}`; };
+  const wkSummary = (ch) => { const km = r1(ch.reduce((s, x) => s + (RUNKINDS.includes(x.kind) ? x.km || 0 : 0), 0)); return `<span class="d">${esc(wkTag(ch))} · ${esc(shortDate(ch[0].date))}–${esc(shortDate(ch[ch.length - 1].date))}</span>${km ? ` <span class="mute sm">· ${esc(fmtKm(km))}</span>` : ''}`; };
   const recent = (d.past || []).slice(-7).map((p) => `${dowOf(p.date)} ${SYM[dayStatus(p, today, a).s] || '·'}`).join('  ');
   const vn = volumeNote(days.slice(0, 7), a);
   let body;
@@ -1498,7 +1499,7 @@ async function ask() {
   if (!key) { if (!currentUser) { $('#authpanel').hidden = false; return err('Sign in to use the AI coach.'); } toggleSettings(true); return err('The coach key could not be loaded from the database. Open Settings > Account & sync and tap Test connection.'); }
   if (profile.span === 'goal' && profile.date && !goalAsked()) {   // a multi-week block is a commitment: ask first, build after
     err(''); say('Before I build your plan to ' + dayLabel(profile.date) + ', two quick questions — answer them in the chat below.', true);
-    pushChatMsg('coach', `Your goal date is ${dayLabel(profile.date)} (${dn(profile.date) - dn(todayStr())} days out). Before I build a plan that long, two quick things:\n1. Which days of the week can you realistically train?\n2. Do you have any niggles, tiredness or busy periods I should know about?\n\nAnswer here and I will build the whole block around it — or tap Ask coach again to skip straight to the plan.`);
+    pushChatMsg('coach', `Your goal date is ${dayLabel(profile.date)} (${dn(profile.date) - dn(todayStr())} days out). Before I build a plan that long, two quick things:\n1. Which days of the week can you realistically train?\n2. Do you have any niggles, tiredness or busy periods I should know about?\n\nAnswer here, then tap Ask coach again and I will build the whole block around your answers. (Tap it again straight away to skip the questions.)`);
     profile = cleanProfile({ ...profile, asked: todayStr(), at: Date.now() }); save();
     return;
   }
@@ -1937,7 +1938,8 @@ function updateCard(u, a, today) {
 }
 function renderUpdates(d, a, today) {
   const ups = (Array.isArray(d.updates) ? d.updates : []).filter((u) => u && u.id && Array.isArray(u.items));
-  const isOpen = (u) => u.status === 'pending' || u.status === 'offer', open = ups.filter(isOpen), rest = ups.filter((u) => !isOpen(u));
+  const isOpen = (u) => u.status === 'pending' || u.status === 'offer', open = ups.filter(isOpen);
+  let rest = ups.filter((u) => !isOpen(u));
   // Keep at most one "outline added" info card visible: repeated rolls should not bury the real updates.
   let seenAdded = false;
   rest = rest.filter((u) => { if (u.src === 'added' && u.status === 'info') { if (seenAdded) return false; seenAdded = true; } return true; });
