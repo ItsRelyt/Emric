@@ -368,6 +368,91 @@ img,svg,canvas{max-width:100%}
   .wcard .del,.wcard .edt{width:44px;height:44px;padding:0;display:grid;place-items:center}
   .tabs{gap:6px}
 }
+
+/* ---------- plan calendar ---------- */
+.cal{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.cal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.cal-title{margin:0;font:700 1.25rem/1.2 var(--disp)}
+.cal-sub{font-size:.8125rem;color:var(--mute);margin-top:2px}
+.cal-nav{display:flex;gap:6px;align-items:center}
+.cd-nav{min-width:40px;min-height:36px;justify-content:center;text-align:center;padding:4px 12px}
+.cd-nav:disabled{opacity:.35;cursor:not-allowed}
+.cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal-dow span{font:600 .75rem var(--disp);color:var(--mute);text-align:center;text-transform:uppercase;letter-spacing:.04em}
+.cd{position:relative;display:grid;grid-template-rows:auto 1fr auto;gap:2px;min-width:0;min-height:98px;padding:7px 9px;border:1px solid #111;border-radius:10px;background:#fff;color:#111;text-align:left;font:inherit;line-height:1.2;cursor:pointer;overflow:hidden;-webkit-appearance:none;appearance:none}
+.cd:focus-visible{outline:3px solid #111;outline-offset:2px}
+.cd.out{border-color:transparent;background:transparent;color:#b3b3b3;cursor:default}
+.cd.k-rest{background:var(--panel2);border-color:#bdbdbd;color:var(--mute)}
+.cd.k-hard{background:#111;color:#fff}
+.cd.past{opacity:.7}
+.cd.auto{border-style:dashed}
+.cd.sel{z-index:1;box-shadow:0 0 0 2px var(--night),0 0 0 4px #111;opacity:1}
+.cd-top{display:flex;justify-content:space-between;align-items:baseline;gap:4px;min-width:0}
+.cd-n{font:700 1rem/1.1 var(--disp);white-space:nowrap}
+.cd-n small{font-weight:600;font-size:.6875rem;opacity:.75}
+.cd.today .cd-n::after{content:'';display:inline-block;width:7px;height:7px;margin-left:5px;border-radius:50%;background:currentColor;vertical-align:1px}
+.cd-s{font:700 .875rem/1 var(--disp)}
+.cd-s.s-done{color:var(--mint)}.cd-s.s-missed{color:var(--berry)}
+.cd.k-hard .cd-s.s-done{color:#8fe0b0}.cd.k-hard .cd-s.s-missed{color:#ffa595}
+.cd-mid{display:grid;align-content:start;gap:2px;min-width:0}
+.cd-k{font:700 .8125rem/1.15 var(--disp)}
+.cd-k .s{display:none}
+.cd-p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:.75rem;line-height:1.3;opacity:.85}
+.cd-km{font:600 .75rem var(--disp);min-height:1em;justify-self:end}
+@media(hover:hover){.cd:not(.out):not(.sel):hover{transform:translateY(-2px)}}
+.cal-legend{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.cal-legend .lg{display:inline-block;width:12px;height:12px;margin-right:5px;border:1px solid #111;border-radius:3px;vertical-align:-2px;background:#fff}
+.cal-legend .lg.hard{background:#111}.cal-legend .lg.rest{background:var(--panel2);border-color:#bdbdbd}
+.cd-detail{display:grid;gap:8px;padding:14px;background:var(--panel2);border:1px solid #111;border-radius:12px;min-width:0;overflow-wrap:anywhere}
+.cd-h{margin:0;font:700 1.125rem/1.2 var(--disp)}
+.cd-tag{cursor:default;text-transform:capitalize}
+.cd-week{border-top:1px solid #d0d0d0;padding-top:8px}
+@media(prefers-reduced-motion:no-preference){.cd-detail{animation:mFade .22s ease-out}.cd{transition:transform .12s,box-shadow .12s}}
+@media(max-width:700px){
+  .cal{padding:12px 10px}
+  .cal-dow,.cal-grid{gap:4px}
+  .cd{min-height:62px;padding:4px 5px;border-radius:8px;gap:1px}
+  .cd-n{font-size:.875rem}.cd-n small{display:none}
+  .cd.today .cd-n::after{width:5px;height:5px;margin-left:3px}
+  .cd-s{font-size:.75rem}
+  .cd-k{font-size:.625rem;letter-spacing:-.01em}.cd-k .l{display:none}.cd-k .s{display:inline}
+  .cd-p{display:none}
+  .cd-km{font-size:.625rem;justify-self:start;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;max-width:100%}
+  .cd.sel{box-shadow:0 0 0 2px var(--night),0 0 0 3.5px #111}
+  .cal-head{align-items:center}
+  .cal-title{font-size:1.125rem}
+}
+@media(max-width:700px){.cd-nav{min-height:44px;min-width:44px}}
+@media(max-width:380px){
+  .cal{padding:10px 8px}
+  .cal-dow span{font-size:.625rem;letter-spacing:0}
+  .cd{min-height:56px;padding:3px 3px}
+  .cd-k{font-size:.5625rem}.cd-km{font-size:.5625rem}.cd-n{font-size:.8125rem}
+}
+
+.cd-km .u{font-weight:600}
+.cal-legend .u-note{display:none}
+.cd-detail .chip,.cd-detail .st{min-height:0;display:inline-flex;align-items:center;padding:2px 10px;font-size:.8125rem;line-height:1.4}
+.cd-detail .badge{font-size:.875rem;padding:1px 10px}
+@media(max-width:700px){
+  .cd-km .u{display:none}
+  .cal-legend .u-note{display:inline}
+  .cd.today .cd-n::after{display:none}
+  .cd.today .cd-n{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+  .cd-k{white-space:nowrap;overflow:hidden}
+}
+
+.cal-head>div:first-child{flex:1 1 150px;min-width:0}
+@media(max-width:380px){
+  .cd-top{gap:1px}
+  .cd-n{font-size:.75rem}
+  .cd-s{font-size:.6875rem}
+  .cd{padding:3px 2px}
+  .cd-nav{min-width:40px;min-height:40px;padding:2px 8px}
+}
+
+.cal-title{white-space:nowrap}
+@media(max-width:700px){.cd-nav[data-cal=today]{font-size:.8125rem;padding:2px 12px}}
 </style>
 </head>
 <body>
@@ -1171,6 +1256,108 @@ function renderLog() {
   $('#cards').innerHTML = rows.length ? rows.slice(0, limit).map(card).join('') : '<p class="mute center">No workouts match. Clear the search or pick another type.</p>';
   $('#sortsel').value = `${sort.k}:${sort.d}`;
 }
+/* ---------- plan calendar: the plan as a week / month grid, with the chosen day's session underneath ---------- */
+const CAL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const CAL_DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const CAL_NAME = { 'easy run': 'Easy run', tempo: 'Tempo', intervals: 'Intervals', 'long run': 'Long run', 'cross-train': 'Cross-train', 'active recovery': 'Active recovery', rest: 'Rest' };
+const CAL_SHORT = { 'easy run': 'Easy', tempo: 'Temp', intervals: 'Intv', 'long run': 'Long', 'cross-train': 'XT', 'active recovery': 'Rec', rest: 'Rest' };
+const CAL_STATUS = { done: 'Done', changed: 'Changed', missed: 'Missed' };
+const calClass = (k) => (k === 'rest' || k === 'active recovery' ? 'rest' : HARD.includes(k) ? 'hard' : 'easy');
+const calMon = (s) => s.slice(0, 7);
+const calMonday = (s) => addDays(s, -mondayIdx(dn(s)));
+let cal = null, calSel = null, calMonth = null;   // cal: what the calendar draws (set on every renderResults); calSel / calMonth: what the person picked
+
+// Which days are on screen: a 7-day (or very short) plan shows just the weeks it touches; a longer plan shows one month at a time.
+function calRange() {
+  const { info, first, last, long, today } = cal, dates = Object.keys(info).sort(), minK = dates[0] && dates[0] < first ? dates[0] : first;
+  if (!long || dn(last) - dn(minK) < 14) return { month: false, from: calMonday(minK), to: addDays(calMonday(last), 6), minK };
+  const lo = calMon(minK), hi = calMon(last);
+  let m = calMonth || calMon(info[calSel] ? calSel : today);
+  if (m < lo) m = lo;
+  if (m > hi) m = hi;
+  calMonth = m;
+  const ms = m + '-01', me = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).toISOString().slice(0, 10);
+  const a0 = ms > minK ? ms : minK, a1 = me < last ? me : last;
+  return { month: true, m, lo, hi, from: calMonday(a0), to: addDays(calMonday(a1), 6), minK };
+}
+function calCell(date) {
+  const it = cal.info[date], n = +date.slice(8, 10), mon = n === 1 ? ` <small>${MON[+date.slice(5, 7) - 1]}</small>` : '';
+  if (!it) return `<div class="cd out" aria-hidden="true"><span class="cd-n">${n}${mon}</span></div>`;
+  const x = it.x, k = x.kind || 'rest', s = it.st.s, isToday = date === cal.today;
+  const mark = x.race ? '★' : SYM[s] || (x.auto && s === 'upcoming' ? '◆' : '');
+  const km = x.km ? fmtKm(x.km) : '', kv = x.km ? kmNum(x.km) : '';
+  const showPlan = x.plan && x.plan.trim().toLowerCase() !== (CAL_NAME[k] || k).toLowerCase();
+  const label = `${dayLabel(date)}${isToday ? ', today' : ''}: ${CAL_NAME[k] || k}${km ? ', ' + km : ''}${CAL_STATUS[s] ? ', ' + CAL_STATUS[s].toLowerCase() : ''}${x.race ? ', goal day' : ''}`;
+  const cls = `cd k-${calClass(k)}${it.plan ? '' : ' past'}${isToday ? ' today' : ''}${date === calSel ? ' sel' : ''}${x.auto ? ' auto' : ''}${x.race ? ' race' : ''}`;
+  return `<button type="button" class="${cls}" data-date="${date}" aria-pressed="${date === calSel}" aria-label="${esc(label)}" tabindex="${date === cal.tab ? 0 : -1}">`
+    + `<span class="cd-top"><span class="cd-n">${n}${mon}</span>${mark ? `<span class="cd-s s-${s}" aria-hidden="true">${mark}</span>` : ''}</span>`
+    + `<span class="cd-mid"><span class="cd-k"><span class="l">${esc(CAL_NAME[k] || k)}</span><span class="s">${esc(CAL_SHORT[k] || k)}</span></span>${showPlan ? `<span class="cd-p">${esc(x.plan)}</span>` : ''}</span>`
+    + `<span class="cd-km">${kv ? `${esc(kv)}<span class="u"> ${unitLabel()}</span>` : ''}</span></button>`;
+}
+function calDetail(date) {
+  const it = cal.info[date], x = it.x, k = x.kind || 'rest', st = it.st, a = cal.a;
+  let t = null; try { t = todayDetail(x, a); } catch (e) { t = null; }
+  const dl = (l, v) => (v ? `<dt>${l}</dt><dd>${esc(v)}</dd>` : '');
+  const km = t && t.distance_km ? fmtKm(t.distance_km) : x.km ? fmtKm(x.km) : '';
+  const status = st.s === 'done' && st.text ? `<p class="sm c-mint" style="margin:0">Done: ${esc(st.text)}</p>`
+    : st.s === 'changed' ? `<p class="sm" style="margin:0">You logged ${esc(st.text)}, which differs from the plan${st.why ? ` (${esc(st.why)})` : ''}.</p>`
+    : st.s === 'missed' ? '<p class="sm c-berry" style="margin:0">No workout was logged for this day.</p>' : '';
+  const plan = (t && t.plan) || x.plan || '';
+  return `<div class="cd-detail" role="region" aria-label="${esc(dayLabel(date))}">`
+    + `<div class="row"><span class="badge">${esc(CAL_NAME[k] || k)}</span><h3 class="cd-h">${esc(dayLabel(date))}${date === cal.today ? ' · Today' : ''}</h3>`
+    + `${CAL_STATUS[st.s] ? `<span class="st st-${st.s}">${CAL_STATUS[st.s]}</span>` : ''}${it.tag ? `<span class="chip cd-tag">${esc(it.tag)}</span>` : ''}</div>`
+    + `${x.note ? `<p class="sm c-berry" style="margin:0">${esc(x.note)}</p>` : ''}${status}`
+    + `${plan ? `<p class="pre" style="margin:0">${esc(plan)}</p>` : ''}`
+    + `<dl>${dl('Target', t && t.target)}${dl('Duration', t && t.duration)}${dl('Distance', km)}${dl('Why', t && t.why)}${dl('If you feel worse', t && t.swap_if_worse)}</dl>`
+    + `${cal.weekLine ? cal.weekLine(date) : ''}</div>`;
+}
+function calDraw(focusDate) {
+  const box = $('#cal'); if (!box || !cal) return;
+  const { info, first, today } = cal;
+  if (!calSel || !info[calSel]) calSel = info[today] ? today : first;
+  const r = calRange(), cells = [];
+  for (let t = r.from; t <= r.to; t = addDays(t, 1)) cells.push(t);
+  cal.tab = cells.includes(calSel) ? calSel : (cells.find((t) => info[t] && info[t].plan) || null);   // one tab stop for the whole grid; arrow keys move inside it
+  const runKm = r1(cells.reduce((sum, t) => { const it = info[t]; return sum + (it && it.plan && (!r.month || calMon(t) === r.m) && RUNKINDS.includes(it.x.kind) ? it.x.km || 0 : 0); }, 0));
+  const title = r.month ? `${CAL_MONTHS[+r.m.slice(5, 7) - 1]} ${r.m.slice(0, 4)}` : `${shortDate(first)} – ${shortDate(cal.last)}`;
+  const nav = (a, label, txt, off) => `<button type="button" class="chip cd-nav" data-cal="${a}" aria-label="${label}"${off ? ' disabled' : ''}>${txt}</button>`;
+  const anyAuto = Object.values(info).some((v) => v.x.auto), anyRace = Object.values(info).some((v) => v.x.race);
+  box.innerHTML = `<div class="cal-head"><div><h3 class="cal-title">${esc(title)}</h3><div class="cal-sub">${runKm ? `${esc(fmtKm(runKm))} of running planned` : 'No running planned'}</div></div>`
+    + `<div class="cal-nav">${r.month ? nav('prev', 'Previous month', '‹', r.m <= r.lo) : ''}${info[today] && !(calSel === today && cells.includes(today)) ? nav('today', 'Jump to today', 'Today', false) : ''}${r.month ? nav('next', 'Next month', '›', r.m >= r.hi) : ''}</div></div>`
+    + `<div class="cal-dow" aria-hidden="true">${CAL_DOW.map((d) => `<span>${d}</span>`).join('')}</div>`
+    + `<div class="cal-grid" role="group" aria-label="Training calendar, ${esc(title)}">${cells.map(calCell).join('')}</div>`
+    + `<div class="cal-legend xs mute"><span><i class="lg hard"></i>Hard</span><span><i class="lg easy"></i>Easy</span><span><i class="lg rest"></i>Rest</span><span>✓ done</span><span>~ changed</span><span>✗ missed</span><span class="u-note">numbers are ${unitLabel()}</span>${anyRace ? '<span>★ goal day</span>' : ''}${anyAuto ? '<span>◆ outline</span>' : ''}</div>`
+    + calDetail(calSel);
+  if (focusDate) { const b = box.querySelector(`.cd[data-date="${focusDate}"]`); if (b) b.focus({ preventScroll: true }); }
+}
+function calSelect(date, focus) {
+  if (!cal || !cal.info[date]) return;
+  const r = calRange();
+  if (r.month && (date < r.from || date > r.to)) calMonth = calMon(date);
+  calSel = date; calDraw(focus ? date : null);
+}
+(() => {
+  const box = $('#weekbox');
+  box.addEventListener('click', (e) => {
+    const day = e.target.closest('.cd[data-date]'), nav = e.target.closest('[data-cal]');
+    if (day) {
+      calSelect(day.dataset.date, true);
+      const dt = $('#cal .cd-detail');   // keep the chosen day's session in view on small screens
+      if (dt) { const rc = dt.getBoundingClientRect(); if (rc.top < 0 || rc.bottom > innerHeight - 90) dt.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+    } else if (nav && cal && !nav.disabled) {
+      const act = nav.dataset.cal;
+      if (act === 'today') { calSel = cal.info[cal.today] ? cal.today : cal.first; calMonth = calMon(calSel); calDraw(); }
+      else { const r = calRange(), y = +r.m.slice(0, 4), mo = +r.m.slice(5, 7) - 1 + (act === 'next' ? 1 : -1); calMonth = new Date(Date.UTC(y, mo, 1)).toISOString().slice(0, 7); calDraw(); }
+    }
+  });
+  box.addEventListener('keydown', (e) => {
+    const b = e.target.closest('.cd[data-date]'); if (!b || !cal) return;
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    if (!step) return;
+    e.preventDefault(); const t = addDays(b.dataset.date, step);
+    if (cal.info[t]) calSelect(t, true);
+  });
+})();
 function renderResults(d) {
   const today = todayStr(), a = analyze(ws, today, { profile, feeling, note: '', prev: null });
   const dl = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
@@ -1195,21 +1382,23 @@ if (long && d.week.length < L) { if (!growPending) { growPending = true; Promise
 else growPending = false;
   const days = d.week.slice(i0, i0 + L), names = { done: 'Done', changed: 'Changed', missed: 'Missed' };
   const phaseOf = (x) => (long && profile.date ? (dn(profile.date) - dn(x.date)) : 99);   // days left before the goal at this day
-  const cardOf = (x) => { const s = dayStatus(x, today, a).s, ph = phaseOf(x); const tag = x.race ? 'goal day' : (long && x.ph) ? (PH_NAME[x.ph] || '').toLowerCase() : ph < 0 ? '' : ph <= 2 ? 'race tune-up' : ph <= 10 ? 'taper' : ph <= 24 ? 'sharpen' : ph <= 38 ? 'build' : ''; return `<div class="px${x.date === today ? ' is-today' : ''}"><div class="row between"><span class="d c-sky wkday">${esc(dowOf(x.date).slice(0, 2))}${x.date === today ? ' •' : ''}</span><span class="st st-${s}" style="font-size:.625rem;padding:0 6px" title="${esc(dayLabel(x.date))} · ${esc(x.kind)}${names[s] ? ` · ${names[s]}` : ''}">${names[s] ? esc(names[s][0]) : esc((SYM[s] || (tag ? '◆' : '·')))}</span></div><p class="wkplan sm" title="${esc(x.plan)}">${esc(x.plan)}${x.km ? ` <span class="wkkm">(${esc(fmtKm(x.km))})</span>` : ''}</p>${tag ? `<span class="xs mute">${esc(tag)}</span>` : ''}</div>`; };
+  const tagOf = (x) => { const ph = phaseOf(x); return x.race ? 'goal day' : (long && x.ph) ? (PH_NAME[x.ph] || '').toLowerCase() : ph < 0 ? '' : ph <= 2 ? 'race tune-up' : ph <= 10 ? 'taper' : ph <= 24 ? 'sharpen' : ph <= 38 ? 'build' : ''; };
   const wkTag = (ch) => { const ph = phaseOf(ch[ch.length - 1]); return ph < 0 ? 'Goal week' : ph <= 10 ? 'Taper' : ph <= 24 ? 'Sharpen' : ph <= 38 ? 'Build' : 'Base'; };
   const wkSummary = (ch) => { const km = r1(ch.reduce((x, y) => x + (RUNKINDS.includes(y.kind) ? y.km || 0 : 0), 0)), first = ch.find((y) => y.ph) || {}, nm = ch.some((y) => y.race) ? 'Goal week' : PH_NAME[first.ph] || wkTag(ch); return `<span class="d">${first.wk ? `Week ${first.wk} · ` : ''}${esc(nm)} · ${esc(shortDate(ch[0].date))}–${esc(shortDate(ch[ch.length - 1].date))}</span>${km ? ` <span class="mute sm">· ${esc(fmtKm(km))}</span>` : ''}`; };
   const wkFocus = (ch) => { const first = ch.find((y) => y.ph); return ch.some((y) => y.race) ? 'Goal week: stay fresh and trust your training.' : first ? PH_FOCUS[first.ph] || '' : ''; };
   const recent = (d.past || []).slice(-7).map((p) => `${dowOf(p.date)} ${SYM[dayStatus(p, today, a).s] || '·'}`).join('  ');
   const vn = volumeNote(days.slice(0, 7), a);
-  let body;
-  if (!long) {
-    body = `${recent ? `<p class="sm mute" style="margin:0">Recent: ${esc(recent)}</p>` : ''}${vn.volume ? `<p class="sm mute" style="margin:0">${esc(vn.volume)}</p>` : ''}<div class="week">${days.map(cardOf).join('')}</div>`;
-  } else {   // one compact Monday-to-Sunday block per week; on phones only the current week is open
-    const bs = weekBounds(days.map((x) => x.date));
-    const blocks = bs.map(([a0, a1], w) => { const ch = days.slice(a0, a1); if (!ch.length) return ''; return `<details class="fold"${w === 0 ? ' open' : ''}><summary>${wkSummary(ch)}</summary>${wkFocus(ch) ? `<p class="sm mute" style="margin:0 0 8px">${esc(wkFocus(ch))}</p>` : ''}<div class="week">${ch.map(cardOf).join('')}</div></details>`; }).join('');
-    body = `<p class="sm mute" style="margin:0">${L} days until your goal on ${esc(dayLabel(profile.date))}, grouped by week.${d.week.some((x) => x.auto) ? ' Days marked ◆ are a simple outline until the coach plans them.' : ''}</p>${blocks}`;
-  }
-  $('#weekbox').innerHTML = fold(long ? 'Plan until goal date' : 'Next 7 days', body);
+  // every day the calendar can show: the plan itself, plus earlier days of the first week that already have a result
+  const lastDay = days[days.length - 1].date, firstDay = days[0].date, keepFrom = addDays(firstDay, -mondayIdx(dn(firstDay))), planDates = new Set(days.map((x) => x.date)), info = {};
+  [...(d.past || []), ...d.week].forEach((x) => { if (x && x.date && x.date >= keepFrom && x.date <= lastDay) info[x.date] = { x, st: dayStatus(x, today, a), tag: tagOf(x), plan: planDates.has(x.date) }; });
+  const bs = long ? weekBounds(days.map((x) => x.date)) : [];
+  const weekLine = (date) => { const b = bs.find(([a0, a1]) => days.slice(a0, a1).some((y) => y.date === date)); if (!b) return ''; const ch = days.slice(b[0], b[1]); return `<p class="sm mute cd-week" style="margin:0">${wkSummary(ch)}${wkFocus(ch) ? `<br>${esc(wkFocus(ch))}` : ''}</p>`; };
+  cal = { info, first: firstDay, last: lastDay, today, long, a, weekLine, tab: null };
+  const intro = long
+    ? `<p class="sm mute" style="margin:0">${L} days until your goal on ${esc(dayLabel(profile.date))}. Tap a day to see its session.${d.week.some((x) => x.auto) ? ' Days marked ◆ are a simple outline until the coach plans them.' : ''}</p>`
+    : `${recent ? `<p class="sm mute" style="margin:0">Recent: ${esc(recent)}</p>` : ''}${vn.volume ? `<p class="sm mute" style="margin:0">${esc(vn.volume)}</p>` : ''}`;
+  $('#weekbox').innerHTML = `<h2>${long ? 'Plan until goal date' : 'Next 7 days'}</h2>${intro}<div class="px cal" id="cal"></div>`;
+  calDraw();
   renderSpanToggle();
   const extra = [d.watch_out && `<b class="d c-berry">Watch out: </b>${esc(d.watch_out)}`, d.stale && '<span class="sm">This plan is running low. Tap Ask coach for a fresh one.</span>',
     ...(d.fixesDate === today ? d.fixes || [] : []).map((f) => `<span class="sm">${esc(f)}</span>`), ...vn.warns.map((f) => `<span class="sm">${esc(f)}</span>`), d.data_notes && `<span class="mute sm">${esc(d.data_notes)}</span>`].filter(Boolean);
