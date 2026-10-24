@@ -320,6 +320,54 @@ html.d-phone.portrait #installbanner{bottom:calc(84px + env(safe-area-inset-bott
 html.d-phone.portrait.kb #installbanner,html.gated #installbanner,body.ckopen #installbanner{display:none}
 #installbanner .gatebox{padding:14px 16px;background:#fff;border:1px solid #111;color:#111;width:auto}
 #installbanner ol{margin:0;padding-left:1.2rem}
+
+/* ---------- mobile layout pass ---------- */
+/* nothing may be wider than the screen: grid tracks may shrink, long words wrap, media scales */
+html,body{max-width:100%;overflow-x:clip}
+main,.stack,#dash,#p-coach,#p-prog,#p-log{grid-template-columns:minmax(0,1fr)}
+main>*,.stack>*,.two>*,.tiles>*,.coachbox>*,.recap-grid>*,.row>*{min-width:0}
+.px,.wcard,.upd,.bub,.rstat,.tile,dd,.say,h2,summary,.goalbanner{overflow-wrap:anywhere}
+img,svg,canvas{max-width:100%}
+.scroll{max-width:100%;-webkit-overflow-scrolling:touch}
+.wc-top{align-items:center}
+.wc-title{line-height:1.25;overflow-wrap:anywhere}
+.wc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px 12px}
+.wc-stats span{display:grid;line-height:1.2}
+.wc-stats b{font:600 .9375rem var(--disp)}
+.wc-stats i{font-style:normal;font-size:.6875rem;color:var(--mute)}
+.wc-note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
+  main{gap:16px}
+  header.row{gap:8px;flex-wrap:nowrap}
+  header .btn{padding:8px 16px;min-height:44px}
+  /* coach: the mascot sits beside what it says, controls take the full width below */
+  .coachbox{grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:center;padding:14px}
+  .coachbox>div{display:contents}
+  .coachbox .sprite{grid-column:1;grid-row:1;padding:6px}
+  .coachbox .say{grid-column:2;grid-row:1;margin:0;min-height:0;font-size:1.05rem;line-height:1.3}
+  .coachbox #feel,.coachbox>div>.row,.coachbox #err,.coachbox #coachmeta{grid-column:1/-1;margin:0!important}
+  #feel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  #feel .chip{padding:8px 2px;min-height:40px;justify-content:center;text-align:center;font-size:.8125rem}
+  /* the week reads as a list, one day per row, instead of seven slivers */
+  .week{grid-template-columns:minmax(0,1fr);gap:8px}
+  .week .px{display:grid;grid-template-columns:2.4rem minmax(0,1fr) auto;gap:2px 10px;align-items:start;padding:10px 12px}
+  .week .px>.row{display:contents}
+  .week .px .wkday{grid-column:1;grid-row:1;font-size:.9375rem}
+  .week .px .st{grid-column:3;grid-row:1;justify-self:end;font-size:.75rem!important;padding:0 8px!important}
+  .week .px .wkplan{grid-column:2;grid-row:1;display:block;-webkit-line-clamp:unset;overflow:visible;font-size:.9375rem;line-height:1.35}
+  .week .px>span.xs{grid-column:2;grid-row:2}
+  .wkkm{font-size:.8125rem}
+  /* detail lists stack so long text never squeezes into a narrow column */
+  dl{grid-template-columns:minmax(0,1fr);gap:2px}
+  dt{margin-top:8px;font-size:.8125rem}
+  /* log cards */
+  .wcard{padding:12px 14px;gap:8px}
+  .wc-top{min-height:40px;padding-right:96px}
+  .wcard .del{top:0;right:0}
+  .wcard .edt{top:0;right:44px}
+  .wcard .del,.wcard .edt{width:44px;height:44px;padding:0;display:grid;place-items:center}
+  .tabs{gap:6px}
+}
 </style>
 </head>
 <body>
@@ -811,10 +859,12 @@ const page = () => (isMobile() ? 10 : 25);
 const fold = (title, inner) => (isMobile() ? `<details class="fold"><summary>${title}</summary>${inner}</details>` : `<h2>${title}</h2>${inner}`);
 function card(w) {
   const n = clean(w.notes);
-  const bits = [w.km ? fmtKm(w.km) : '', w.sec ? fmtDur(w.sec) : '', w.pace ? `${fmtPaceUnit(w.pace)}${paceUnit()}` : '', w.hr ? `${w.hr} bpm` : '', w.elev ? `${w.elev} m up` : ''].filter(Boolean).join(' · ');
-  return `<div class="wcard"><div class="row"><span class="mute sm">${esc(w.date)}</span><span class="chip" style="cursor:default">${esc(w.type)}</span></div><div class="d">${esc(w.title)}</div><div class="sm">${esc(bits)}</div>${n ? `<div class="trunc mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}<button class="edt" data-edit="${esc(w.id)}" aria-label="Edit ${esc(w.title)} on ${esc(w.date)}" title="Edit">✎</button><button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></div>`;
+  const stat = (v, l) => `<span><b>${esc(v)}</b><i>${l}</i></span>`;
+  const stats = [w.km ? stat(fmtKm(w.km), 'Distance') : '', w.sec ? stat(fmtDur(w.sec), 'Time') : '', w.pace ? stat(`${fmtPaceUnit(w.pace)}${paceUnit()}`, 'Pace') : '', w.hr ? stat(`${w.hr} bpm`, 'Avg HR') : '', w.elev ? stat(`${w.elev} m`, 'Climb') : ''].join('');
+  return `<div class="wcard"><div class="row wc-top"><span class="mute sm">${esc(w.date)}</span><span class="chip" style="cursor:default">${esc(w.type)}</span></div><div class="d wc-title">${esc(w.title)}</div>${stats ? `<div class="wc-stats">${stats}</div>` : ''}${n ? `<div class="wc-note mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}<button class="edt" data-edit="${esc(w.id)}" aria-label="Edit ${esc(w.title)} on ${esc(w.date)}" title="Edit">✎</button><button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></div>`;
 }
 function applyLayout() {
+  { const nt = $('#note'); if (nt) nt.placeholder = isMobile() ? 'How do you feel today?' : 'How do you feel today? Sore, tired, fresh…'; }
   document.querySelectorAll('.sec').forEach((d, i) => { d.open = (i === 0); });
   drawCoach();
   try { if (coachLast && coachLast.data) renderResults(coachLast.data); } catch (e) { console.error('render failed', e); }
