@@ -743,68 +743,78 @@ const fmtKmRange = (lo, hi) => `${Math.round(convKm(lo) * 10) / 10}-${Math.round
 const paceBand = (band) => String(band || '').split('-').map((x) => { const p = parsePace(x); return p == null ? x : fmtPaceUnit(p); }).join('-');
 
 /* ---------- look: black and white (drawn coach) ---------- */
-const CLEAN_DEFAULT = { hat: 'None', outfit: 'Gym tank' };
-const lookClean = (() => { try { return { ...CLEAN_DEFAULT, ...JSON.parse(lsGet('pp.lookc', '{}')) }; } catch { return { ...CLEAN_DEFAULT }; } })();
+const CLEAN_DEFAULT = { hat: 'None', outfit: 'Hoodie' };
+const lookClean = (() => { let o; try { o = { ...CLEAN_DEFAULT, ...JSON.parse(lsGet('pp.lookc', '{}')) }; } catch { o = { ...CLEAN_DEFAULT }; } if (o.outfit === 'Gym tank') o.outfit = 'Hoodie'; return o; })();   // the old default outfit became the hoodie
 const curLook = () => lookClean;   // the drawn coach keeps its own hat and outfit
 const COL = () => ({ hi: '#111111', lo: '#8f8f8f', empty: '#e4e4e4', line: '#111111', dot: '#fff', dotEdge: '#111111' });
-// A drawn (vector) coach in the style of a thick-outlined doodle.
-const coachTop = (lk) => ({ Wizard: -38, Party: -41, Chef: -34, Crown: -22, Viking: -20, Cap: -18 }[lk.hat] ?? -6);
+// A drawn (vector) coach in the style of a thick-outlined doodle: big round head, little ear, hoodie, hands in pockets.
+// Everything is drawn in a 490-wide "art" space and scaled into the 190-wide box by the group transform below.
+const coachTop = (lk) => ({ Wizard: -48, Party: -42, Chef: -37, Crown: -27, Viking: -16, Cap: -12 }[lk.hat] ?? 0);
 const coachRatio = (lk) => (212 - coachTop(lk)) / 190;
 function drawnCoach(lk, w, ex) {
-  const INK = '#111111', CREAM = '#f7efc6', ORANGE = '#f1a62f', RED = '#c1272d', GRN = '#2f7d52';
-  const sw = `stroke="${INK}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"`;
+  const INK = '#14213d', CREAM = '#fdf1d5', BLUE = '#2f6fe0', DBLUE = '#1f4fb0', RED = '#c1272d', GRN = '#2f7d52', GOLD = '#e8b93a';
+  const sw = `stroke="${INK}" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"`;
   const path = (d, fill, sx = '') => `<path d="${d}" fill="${fill}" ${sw} ${sx}/>`;
   const circ = (cx, cy, r, fill) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" ${sw}/>`;
   const ell = (cx, cy, rx, ry, fill) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" ${sw}/>`;
   const rect = (x, y, wd, h, r, fill) => `<rect x="${x}" y="${y}" width="${wd}" height="${h}" rx="${r}" fill="${fill}" ${sw}/>`;
+  const line = (d, wd = 7) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${wd}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const OUT = {
-    'Gym tank': { top: ORANGE },
+    'Hoodie': { top: BLUE, hood: true },
     'Shirtless': { top: CREAM, trunks: '#e8c23a', chest: true },
     'Hawaiian': { top: '#7fc09a', dots: true },
     'Tutu': { top: '#d9674f', tutu: true },
     'Referee': { top: '#ffffff', stripes: true },
     'Hero': { top: RED, cape: true, emblem: true },
   };
-  const ot = OUT[lk.outfit] || OUT['Gym tank'];
+  const ot = OUT[lk.outfit === 'Gym tank' ? 'Hoodie' : lk.outfit] || OUT['Hoodie'];
   const HAT = {
-    'Headband': path('M39 34 Q106 8 173 34 L173 41 Q106 15 39 41 Z', RED) + path('M170 35 L187 27 L184 44 Z', RED),
-    'Cap': path('M42 24 Q40 -12 106 -12 Q172 -12 172 24 Q106 14 42 24 Z', GRN) + path('M130 20 Q160 14 190 26 Q188 34 172 33 Q150 29 130 29 Z', '#1f5c3a') + circ(106, -12, 3.4, '#1f5c3a'),
-    'Wizard': ell(106, 12, 52, 9, '#4b4b63') + path('M62 10 Q90 -10 116 -36 Q112 -6 150 10 Z', '#6a6a8a') + path('M64 8 Q106 20 148 8 L150 13 Q106 26 62 13 Z', RED) + circ(96, -6, 3, CREAM),
-    'Chef': circ(74, -4, 16, '#ffffff') + circ(138, -4, 16, '#ffffff') + circ(106, -14, 19, '#ffffff') + rect(58, 2, 96, 22, 6, '#ffffff'),
-    'Crown': path('M64 10 L60 -14 L82 0 L106 -20 L130 0 L152 -14 L148 10 Z', '#e8b93a') + circ(106, -2, 4, RED) + circ(82, 4, 2.6, GRN) + circ(130, 4, 2.6, GRN),
-    'Party': path('M84 8 L106 -34 L128 8 Z', RED) + `<path d="M96 -10 H116 M91 -1 H121" stroke="${CREAM}" stroke-width="3" fill="none" stroke-linecap="round"/>` + circ(106, -34, 5, GRN),
-    'Viking': path('M58 8 Q30 8 24 -16 Q46 -4 62 0 Z', CREAM) + path('M154 8 Q182 8 188 -16 Q166 -4 150 0 Z', CREAM) + path('M58 14 Q56 -10 106 -10 Q156 -10 154 14 Z', '#9aa0a6') + rect(56, 10, 100, 12, 3, '#6b7077'),
+    'Headband': path('M104 150 Q237 100 372 148 L372 172 Q237 124 104 174 Z', RED) + path('M366 150 L400 134 L394 178 Z', RED),
+    'Cap': path('M110 132 Q108 54 237 54 Q366 54 366 132 Q237 114 110 132 Z', GRN) + path('M290 124 Q350 110 408 134 Q404 152 372 150 Q330 142 290 144 Z', '#1f5c3a') + circ(237, 54, 8, '#1f5c3a'),
+    'Wizard': ell(237, 98, 134, 22, '#4b4b63') + path('M140 94 Q200 40 262 -34 Q244 40 336 94 Z', '#6a6a8a') + path('M142 90 Q237 120 334 90 L338 104 Q237 136 138 104 Z', RED) + circ(200, 64, 7, CREAM),
+    'Chef': circ(160, 62, 38, '#ffffff') + circ(318, 62, 38, '#ffffff') + circ(237, 38, 44, '#ffffff') + rect(130, 62, 214, 50, 12, '#ffffff'),
+    'Crown': path('M140 98 L130 32 L184 68 L237 16 L290 68 L344 32 L334 98 Z', GOLD) + circ(237, 54, 9, RED) + circ(184, 84, 6, GRN) + circ(290, 84, 6, GRN),
+    'Party': path('M180 98 L237 -10 L294 98 Z', RED) + `<path d="M208 44 H266 M194 70 H280" stroke="${CREAM}" stroke-width="8" fill="none" stroke-linecap="round"/>` + circ(237, -10, 11, GRN),
+    'Viking': path('M130 104 Q64 104 50 42 Q100 68 140 82 Z', CREAM) + path('M344 104 Q410 104 424 42 Q374 68 334 82 Z', CREAM) + path('M132 110 Q130 46 237 46 Q344 46 342 110 Z', '#9aa0a6') + rect(128, 94, 218, 28, 6, '#6b7077'),
   };
-  const p = [];
-  p.push(ell(100, 205, 54, 5.5, RED).replace(sw, 'stroke="none"'));
-  if (ot.cape) p.push(path('M54 98 Q28 140 30 176 L162 176 Q166 140 140 98 Z', '#8f1d22'));
-  p.push(`<path d="M80 166 V202 M120 166 V202" fill="none" stroke="${INK}" stroke-width="3.6" stroke-linecap="round"/>`);
-  p.push(path('M56 94 L46 163 Q98 172 148 163 L142 94 Z', ot.top));
-  if (ot.stripes) for (const x of [62, 76, 90, 104, 118, 132]) p.push(`<path d="M${x} 100 V${166 + (x < 100 ? 0 : 0) - 3}" stroke="#2e2e2e" stroke-width="3" fill="none"/>`);
-  if (ot.dots) { for (const [x, y] of [[62, 120], [118, 116], [78, 140], [102, 128], [130, 142], [66, 156], [100, 154]]) p.push(`<circle cx="${x}" cy="${y}" r="3.4" fill="${RED}"/>`); p.push(path('M82 104 L98 124 L114 104 Z', '#ffffff')); }
-  if (ot.chest) p.push('<circle cx="80" cy="128" r="1.8" fill="#111"/><circle cx="116" cy="128" r="1.8" fill="#111"/>', path('M52 152 H144 L148 164 Q98 172 46 164 Z', ot.trunks));
-  if (ot.emblem) p.push(circ(98, 134, 12, '#f4d36b'), '<path d="M98 124 L101.2 131 L108.6 131.6 L103 136.4 L104.8 143.6 L98 139.8 L91.2 143.6 L93 136.4 L87.4 131.6 L94.8 131 Z" fill="#c1272d"/>');
-  if (ot.tutu) p.push(path('M42 152 Q98 140 154 152 L170 170 Q98 184 26 170 Z', '#f0b3a6'));
-  p.push(`<path d="M50 108 Q37 134 44 157 Q46 161 50 157" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`, `<path d="M146 108 Q157 134 150 157 Q148 161 144 157" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`);
-  p.push(circ(30, 76, 17, CREAM), '<path d="M22 70 Q31 66 34 75 Q35 83 27 87" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"/>');
   const HEAD = ex === 'ill' ? '#cfe6d3' : CREAM;
-  p.push(path('M76 6 H136 Q174 6 174 44 V66 Q174 106 134 106 H78 Q38 106 38 66 V44 Q38 6 76 6 Z', HEAD));
-  if (!lk.hat || lk.hat === 'None' || lk.hat === 'Headband') p.push(`<path d="M117 12 L121 0 M125 12 L127 -1 M133 12 L134 0" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`);
-  const E = [[104, 55, 102.3, 51], [160, 53.5, 158.3, 49.5]], gz = ex === 'think' ? [-3, -3] : ex === 'think2' ? [3, -3] : [0, 0];
-  const ln = (d) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const p = [];
+  p.push('<ellipse cx="236" cy="552" rx="150" ry="12" fill="#cfdcf5"/>');                                    // ground shadow
+  if (ot.cape) p.push(path('M122 300 Q76 380 82 478 L392 478 Q398 380 346 300 Z', '#8f1d22'));
+  p.push(line('M190 430 V492 M270 430 V492', 8));                                                              // legs
+  p.push(path('M118 522 Q116 496 150 486 L186 486 Q196 506 220 508 Q242 514 240 532 Q238 546 222 546 H134 Q118 546 118 522 Z', '#ffffff'),
+         path('M156 546 L190 512 L222 512 Q240 518 240 534 Q238 546 222 546 Z', BLUE),
+         line('M168 500 L180 506 M164 512 L178 518', 5));                                                      // left shoe
+  p.push(path('M250 532 Q248 502 276 490 L306 486 Q316 504 338 508 Q354 514 352 532 Q350 546 334 546 H266 Q250 546 250 532 Z', '#ffffff'),
+         path('M296 512 L338 514 Q352 520 352 534 Q350 546 334 546 H282 Z', BLUE),
+         line('M284 500 L298 504 M286 512 L300 516', 5));                                                      // right shoe
+  if (ot.hood) p.push(path('M128 304 Q116 272 158 278 L330 282 Q352 288 348 312 Z', DBLUE));                  // hood behind the neck
+  p.push(path('M150 292 Q112 318 118 372 Q122 402 166 418 L168 434 H330 L330 416 Q348 398 348 368 Q344 318 308 292 Z', ot.top));   // body
+  if (ot.stripes) for (const x of [158, 190, 222, 254, 286, 318]) p.push(line(`M${x} 304 V${428}`, 7));
+  if (ot.dots) { for (const [x, y] of [[156, 350], [300, 340], [190, 390], [250, 360], [316, 394], [160, 410], [244, 410]]) p.push(`<circle cx="${x}" cy="${y}" r="9" fill="${RED}"/>`); p.push(path('M212 284 L250 336 L290 284 Z', '#ffffff')); }
+  if (ot.chest) p.push('<circle cx="198" cy="344" r="5" fill="#14213d"/><circle cx="288" cy="344" r="5" fill="#14213d"/>', path('M122 402 H348 L352 438 Q236 450 114 438 Z', ot.trunks));
+  if (ot.emblem) p.push(circ(236, 360, 30, '#f4d36b'), '<path d="M236 336 L244 354 L263 356 L249 368 L253 386 L236 376 L219 386 L223 368 L209 356 L228 354 Z" fill="#c1272d"/>');
+  if (ot.tutu) p.push(path('M104 410 Q236 384 358 410 L392 454 Q236 480 76 454 Z', '#f0b3a6'));
+  p.push(`<path d="M222 280 L250 304 L280 280 Z" fill="${HEAD}" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>`);   // neck
+  if (ot.hood) p.push(line('M233 320 V356', 14), `<path d="M233 322 V354" stroke="#fff" stroke-width="6" stroke-linecap="round"/>`, line('M270 320 V356', 14), `<path d="M270 322 V354" stroke="#fff" stroke-width="6" stroke-linecap="round"/>`);   // drawstrings
+  p.push(line('M134 304 Q104 352 140 392 Q160 410 190 408'), line('M334 304 Q364 352 330 392 Q310 410 288 408'));   // arms, hands in pockets
+  if (ot.hood) p.push(line('M182 374 Q202 394 208 426'), line('M290 374 Q274 394 270 426'));                      // pocket openings
+  p.push(circ(78, 222, 38, HEAD), line('M62 212 Q78 198 90 214 Q94 234 74 238', 6));                                // ear
+  p.push(path('M170 86 H290 Q376 86 376 172 V196 Q376 278 292 278 H182 Q98 278 98 196 V172 Q98 86 170 86 Z', HEAD));   // head
+  const E = [[232, 186, 226, 174], [342, 178, 336, 166]], gz = ex === 'think' ? [-8, -8] : ex === 'think2' ? [8, -8] : [0, 0];
   p.push(E.map(([x, y, hx, hy], i) => {
-    if (ex === 'blink') return ln(`M${x - 8} ${y} Q${x} ${y + 6} ${x + 8} ${y}`);
-    if (ex === 'sleepy' || ex === 'ill') return ln(`M${x - 8} ${y + 2} L${x + 8} ${y + 2}`);
-    if (ex === 'sore') return ln(i ? `M${x + 8} ${y - 5} L${x - 6} ${y} L${x + 8} ${y + 5}` : `M${x - 8} ${y - 5} L${x + 6} ${y} L${x - 8} ${y + 5}`);
-    if (ex === 'cheer') return ln(`M${x - 8} ${y + 4} Q${x} ${y - 8} ${x + 8} ${y + 4}`);
-    return `<ellipse cx="${x + gz[0]}" cy="${y + gz[1]}" rx="6.8" ry="10.5" fill="${INK}"/><circle cx="${hx + gz[0]}" cy="${hy + gz[1]}" r="2.2" fill="#fff"/>`;
+    if (ex === 'blink') return line(`M${x - 16} ${y} Q${x} ${y + 14} ${x + 16} ${y}`, 8);
+    if (ex === 'sleepy' || ex === 'ill') return line(`M${x - 16} ${y + 4} L${x + 16} ${y + 4}`, 8);
+    if (ex === 'sore') return line(i ? `M${x + 16} ${y - 10} L${x - 12} ${y} L${x + 16} ${y + 10}` : `M${x - 16} ${y - 10} L${x + 12} ${y} L${x - 16} ${y + 10}`, 8);
+    if (ex === 'cheer') return line(`M${x - 16} ${y + 8} Q${x} ${y - 16} ${x + 16} ${y + 8}`, 8);
+    return `<ellipse cx="${x + gz[0]}" cy="${y + gz[1]}" rx="17" ry="27" fill="${INK}"/><circle cx="${hx + gz[0]}" cy="${hy + gz[1]}" r="6" fill="#fff"/>`;
   }).join(''));
-  const MP = { calm: 'M128 82 Q134 84 140 82', think: 'M127 84 L141 84', think2: 'M127 84 L141 84', sleepy: 'M127 84 L141 84', sore: 'M127 86 Q134 80 141 86', ill: 'M126 84 q4 -4 8 0 t8 0' };
-  const MO = { cheer: `<path d="M125 80 Q134 96 143 80 Z" fill="#8f1d22" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>`, oops: `<ellipse cx="134" cy="85" rx="4.2" ry="5.2" fill="#8f1d22" stroke="${INK}" stroke-width="2.6"/>` };
-  p.push(ell(132, 67, 8.8, 6.2, HEAD), MO[ex] || `<path d="${MP[ex] || 'M127 83 Q134 80 141 84'}" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`);
+  const MP = { calm: 'M268 228 Q288 242 310 226', think: 'M270 232 H308', think2: 'M270 232 H308', sleepy: 'M270 232 H308', sore: 'M268 240 Q288 224 310 240', ill: 'M264 232 q10 -10 20 0 t20 0' };
+  const MO = { cheer: `<path d="M264 224 Q288 266 314 224 Z" fill="#7a1f2b" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>`, oops: `<ellipse cx="288" cy="236" rx="11" ry="13" fill="#7a1f2b" stroke="${INK}" stroke-width="6"/>` };
+  p.push(ell(290, 200, 17, 11, HEAD), MO[ex] || `<path d="${MP[ex] || MP.calm}" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>`);
   if (HAT[lk.hat]) p.push(HAT[lk.hat]);
   const top = coachTop(lk);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${Math.round(w * coachRatio(lk))}" viewBox="0 ${top} 190 ${212 - top}" role="img" aria-hidden="true">${p.join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${Math.round(w * coachRatio(lk))}" viewBox="0 ${top} 190 ${212 - top}" role="img" aria-hidden="true"><g transform="translate(-7 -30.55) scale(0.43)">${p.join('')}</g></svg>`;
 }
 // Small drawn icons for the stat tiles.
 const FLAME = 'flame', SHOE = 'shoe', MOON = 'moon';
@@ -974,7 +984,7 @@ function summarize(ws, today) {
 
 /* ---------- coach look: hats and outfits for the drawn coach ---------- */
 const HATS = { None: null, Headband: {}, Cap: {}, Wizard: {}, Chef: {}, Crown: {}, Party: {}, Viking: {} };
-const OUTFITS = { 'Gym tank': {}, Shirtless: {}, Hawaiian: {}, Tutu: {}, Referee: {}, Hero: {} };
+const OUTFITS = { Hoodie: {}, Shirtless: {}, Hawaiian: {}, Tutu: {}, Referee: {}, Hero: {} };
 /* ---------- coach mood: expressions, idle blink + breathing, and a working animation ---------- */
 let moodFlash = '', moodFlashT = null, blinking = false, scan = 0, moodT = null;
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
@@ -1030,7 +1040,7 @@ $('#units').onchange = (e) => {
 let dv = 0;   // bumps on every local change so a sync can tell whether something changed while it was running
 const dirtyNow = () => lsGet('pp.dirty', '') === '1';
 const markDirty = () => { dv++; lsSet('pp.dirty', '1'); };
-const L2 = (v) => (v && HATS[v.hat] !== undefined && OUTFITS[v.outfit] ? { hat: v.hat, outfit: v.outfit } : null);
+const L2 = (v) => { const o = v && (v.outfit === 'Gym tank' ? 'Hoodie' : v.outfit); return v && HATS[v.hat] !== undefined && OUTFITS[o] ? { hat: v.hat, outfit: o } : null; };
 const PREF_OK = {
   lookc: L2,
   goal: (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 14 ? n : null; },
