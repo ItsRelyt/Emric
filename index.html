@@ -6,6 +6,9 @@
 
 <meta name="theme-color" content="#fafafa">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Emric"><meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Emric: AI running coach</title>
 <script>/* hard reload (Ctrl+Shift+R style) once per fresh open: clear the HTTP cache and service-worker caches, then reload */
 (function(){if(sessionStorage.getItem('pp.hardreload')==='1')return;sessionStorage.setItem('pp.hardreload','1');
@@ -311,6 +314,12 @@ html.d-phone.portrait.kb #ckbanner{display:none}
 #ckbanner .gatebox{padding:14px 16px;background:#fff;border:1px solid #111;color:#111}
 /* keep the bottom of the page clear while the cookie banner is up (footer links stay reachable) */
 body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
+/* install-to-home-screen prompt */
+#installbanner{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:135;max-width:520px;margin-inline:auto}
+html.d-phone.portrait #installbanner{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+html.d-phone.portrait.kb #installbanner,html.gated #installbanner,body.ckopen #installbanner{display:none}
+#installbanner .gatebox{padding:14px 16px;background:#fff;border:1px solid #111;color:#111;width:auto}
+#installbanner ol{margin:0;padding-left:1.2rem}
 </style>
 </head>
 <body>
@@ -409,6 +418,21 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
     <p class="mute xs" style="margin:0">You can change this choice any time from Settings or the "Cookie preferences" link at the bottom of the page.</p>
   </div>
 </div>
+<div id="installbanner" role="dialog" aria-modal="false" aria-labelledby="insttitle" hidden>
+  <div class="px stack gatebox">
+    <h2 id="insttitle" style="margin:0;font-size:1rem">Add Emric to your home screen</h2>
+    <p class="sm" id="instmsg" style="margin:0">Get Emric as an app with its own icon on your home screen, instead of opening the website each time.</p>
+    <ol class="sm" id="inststeps" hidden>
+      <li>Tap the <strong>Share</strong> button (the square with an arrow) in your browser.</li>
+      <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>. The Emric icon will appear on your home screen.</li>
+    </ol>
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn mint" id="instgo" type="button">Install</button>
+      <button class="btn" id="instno" type="button">Not now</button>
+    </div>
+  </div>
+</div>
 <div id="editmodal" role="dialog" aria-modal="true" aria-labelledby="edittitle" hidden>
   <div class="px stack gatebox">
     <div class="row between" style="flex-wrap:nowrap">
@@ -443,7 +467,6 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
           <button class="btn sky" id="stravabtn">Import from Strava, Garmin or Polar</button>
           <button class="btn mint" id="xcsv">Export CSV</button>
           <button class="btn mint" id="xjson">Export JSON</button>
-          <button class="btn" id="dbgbtn" title="Temporary: saves a file describing exactly what is on screen">Debug report (temporary)</button>
         </div>
       </details>
       <button class="btn" id="gear" aria-expanded="false" aria-controls="settings">Settings</button>
@@ -693,16 +716,7 @@ body.ckopen main{padding-bottom:clamp(24px,30vh,300px)!important}
 
 <script>
 'use strict';
-const PWA = false;
-/* TEMPORARY debug support: remember recent errors so the debug report can include them */
-const dbgErrors = [];
-(function () {
-  const add = (type, msg) => { dbgErrors.push({ at: new Date().toISOString(), type, msg: String(msg).slice(0, 600) }); if (dbgErrors.length > 80) dbgErrors.shift(); };
-  window.addEventListener('error', (e) => add('error', `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno}:${e.colno})`));
-  window.addEventListener('unhandledrejection', (e) => add('unhandledrejection', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
-  for (const k of ['error', 'warn']) { const orig = console[k]; console[k] = (...a) => { add('console.' + k, a.map((x) => (x && x.stack) || (typeof x === 'object' ? (() => { try { return JSON.stringify(x); } catch { return String(x); } })() : String(x))).join(' ')); orig.apply(console, a); }; }
-})();
-
+const PWA = true;
 /* ---------- helpers ---------- */
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -3616,93 +3630,36 @@ polarUi();
 stravaLast();
 
 
-/* ---------- TEMPORARY debug report: exactly what is on screen, plus the app state behind it ---------- */
-function dbgVisible(el) {
-  try {
-    if (!el.isConnected) return false;
-    const cs = getComputedStyle(el);
-    if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
-  } catch { return false; }
+/* ---------- install-to-home-screen prompt ---------- */
+const INST_KEY = 'emric.installprompt';   // 'installed', or the time (ms) the person last said "Not now"
+let instEvt = null, instTimer = null;
+const instStandalone = () => !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+const instIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const instSnoozed = () => { const v = lsGet(INST_KEY, ''); if (v === 'installed') return true; const t = +v; return !!t && Date.now() - t < 14 * 864e5; };
+function instHide() { const b = $('#installbanner'); if (b) b.hidden = true; if (instTimer) { clearInterval(instTimer); instTimer = null; } }
+function instTryShow() {
+  const b = $('#installbanner');
+  if (!b || !b.hidden) return;
+  if (instStandalone() || instSnoozed()) return instHide();
+  if (!instEvt && !instIOS()) return;                                              // this browser can't install: say nothing
+  if (!$('#gate').hidden || !$('#ckbanner').hidden || !$('#legalmodal').hidden || !$('#editmodal').hidden) return;   // wait until nothing else is in the way
+  $('#instgo').textContent = instEvt ? 'Install' : 'Show me how';
+  $('#instmsg').hidden = false; $('#inststeps').hidden = true;
+  b.hidden = false;
 }
-function dbgOutline() {
-  const lines = []; let count = 0;
-  const walk = (el, depth) => {
-    if (count > 5000 || !dbgVisible(el)) return;
-    const tag = el.tagName.toLowerCase();
-    if (['script', 'style', 'noscript', 'template'].includes(tag)) return;
-    let own = '';
-    el.childNodes.forEach((n) => { if (n.nodeType === 3) own += n.textContent; });
-    own = own.replace(/\s+/g, ' ').trim();
-    const st = [];
-    if (el.disabled) st.push('disabled');
-    for (const k of ['aria-pressed', 'aria-selected', 'aria-expanded', 'aria-label', 'title', 'role']) { const v = el.getAttribute && el.getAttribute(k); if (v) st.push(`${k}=${JSON.stringify(String(v).slice(0, 80))}`); }
-    if (tag === 'details') st.push(el.open ? 'open' : 'closed');
-    if (['input', 'select', 'textarea'].includes(tag)) { if (el.type === 'checkbox' || el.type === 'radio') st.push(`checked=${el.checked}`); else if (el.type !== 'file') st.push(`value=${JSON.stringify(String(el.value).slice(0, 120))}`); if (el.placeholder) st.push(`placeholder=${JSON.stringify(el.placeholder)}`); }
-    const r = el.getBoundingClientRect(), cls = String(el.getAttribute('class') || '').slice(0, 50);
-    lines.push(`${'  '.repeat(depth)}<${tag}${el.id ? '#' + el.id : ''}${cls ? '.' + cls.replace(/\s+/g, '.') : ''}>${own ? ' ' + JSON.stringify(own.slice(0, 400)) : ''}${st.length ? ' [' + st.join(' ') + ']' : ''} @${Math.round(r.left)},${Math.round(r.top + scrollY)} ${Math.round(r.width)}x${Math.round(r.height)}`);
-    count++;
-    if (tag === 'svg') return;
-    for (const c of el.children) walk(c, depth + 1);
-  };
-  walk(document.body, 0);
-  return lines;
-}
-function dbgSections() {
-  const ids = ['gate', 'legalmodal', 'ckbanner', 'editmodal', 'authpanel', 'settings', 'stravapanel', 'msg', 'syncstat', 'tabs', 'p-coach', 'spanbox', 'res', 'planmsg', 'updates', 'ulist', 'today', 'insights', 'weekbox', 'watch', 'chat', 'chatlog', 'empty', 'dash', 'p-prog', 'recap', 'tiles', 'bars', 'prog', 'p-log', 'logform', 'err', 'coachmeta'];
-  return ids.map((id) => {
-    const el = document.getElementById(id);
-    if (!el) return { id, exists: false };
-    const r = el.getBoundingClientRect();
-    return { id, visible: dbgVisible(el), hiddenAttr: !!el.hidden, children: el.childElementCount, textLength: (el.textContent || '').trim().length, size: `${Math.round(r.width)}x${Math.round(r.height)}` };
-  });
-}
-function dbgHiddenWithContent() {
-  return [...document.querySelectorAll('[id]')].filter((el) => !dbgVisible(el) && (el.textContent || '').trim().length > 0).map((el) => `#${el.id} (${(el.textContent || '').trim().length} characters of content, not shown)`).slice(0, 80);
-}
-function buildDebugReport() {
-  const safe = (f) => { try { return f(); } catch (e) { return { reportError: String((e && e.message) || e) }; } };
-  const today = todayStr();
-  const planDay = (x) => ({ date: x.date, dow: dowOf(x.date), kind: x.kind, plan: x.plan, km: x.km, week: x.wk, phase: x.ph, race: !!x.race, outline: !!x.auto, session: x.s || null, note: x.note || null });
-  const d = coachLast && coachLast.data;
-  return {
-    about: 'Debug report from the Emric running-coach web app. "screen" shows exactly what the user could see when the report was made (visible text, then every visible element with its position and state). "hiddenButHasContent" and "sections" show what exists but is NOT displayed. "state" is the data behind the screen, and "errors" are recent JavaScript errors and warnings. The sign-in token and AI key are not included.',
-    madeAt: new Date().toISOString(), today,
-    device: safe(() => ({ userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, viewport: `${innerWidth}x${innerHeight}`, scroll: `${Math.round(scrollX)},${Math.round(scrollY)}`, pageHeight: document.documentElement.scrollHeight, pixelRatio: devicePixelRatio, htmlClasses: String(document.documentElement.className), phoneLayout: isMobile(), standalone: !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches), online: navigator.onLine, url: location.origin + location.pathname })),
-    screen: {
-      visibleText: safe(() => document.body.innerText.slice(0, 60000)),
-      sections: safe(dbgSections),
-      hiddenButHasContent: safe(dbgHiddenWithContent),
-      visibleElements: safe(dbgOutline),
-    },
-    state: {
-      selectedTab: safe(() => tab), planLength: safe(() => profile.span), coachingMode: safe(() => profile.mode), units: safe(() => (uMi() ? 'miles' : 'km')),
-      feelingToday: safe(() => feeling), weeklyStreakGoal: safe(() => getGoal()),
-      profile: safe(() => profile), lookOfCoach: safe(() => ({ ...lookClean })),
-      account: safe(() => ({ signedIn: !!currentUser, aiKeyLoaded: !!cachedGroqKey, syncError: syncErr || null, unsentChanges: dirtyNow(), lastSync: lastSyncAt ? new Date(lastSyncAt).toISOString() : null, busy, chatBusy })),
-      workouts: safe(() => ({ count: ws.length, newest25: [...ws].sort((x, y) => y.date.localeCompare(x.date)).slice(0, 25).map((w) => ({ date: w.date, type: w.type, title: w.title, km: w.km, minutes: Math.round(w.sec / 60), pace: w.pace ? fmtPace(w.pace) : null, hr: w.hr, elev: w.elev })) })),
-      statsShownOnTiles: safe(() => summarize(ws, today)),
-      savedPlan: safe(() => (d ? {
-        savedAt: new Date(coachLast.at).toISOString(), headline: d.headline, watchOut: d.watch_out, dataNotes: d.data_notes, fixes: d.fixes, stale: !!d.stale, expired: !!d.expired,
-        todaySession: (() => { const i = (d.week || []).findIndex((x) => x.date >= today); return i < 0 ? null : todayDetail(d.week[i], analyze(ws, today, { feeling, note: '', profile, prev: null })); })(),
-        insights: d.insights, days: (d.week || []).length, week: (d.week || []).map(planDay), past: (d.past || []).map(planDay),
-        updates: (d.updates || []).slice(0, 10),
-      } : null)),
-      rulesForToday: safe(() => { const a = analyze(ws, today, { feeling, note: '', profile, prev: null }); return { allowedKinds: a.allowed, reasons: a.reasons, weeklyRunTarget: a.target, longRunCap: a.longCap, phase: a.phase, planDaysWanted: a.next7.length }; }),
-      chat: safe(() => chat.slice(-30).map((m) => ({ who: m.r, at: m.at ? new Date(m.at).toISOString() : null, text: m.t, planSuggestion: m.uid || null }))),
-      coachNoteBox: safe(() => $('#note').value),
-    },
-    errors: dbgErrors.slice(),
-  };
-}
-$('#dbgbtn').onclick = () => {
-  try {
-    const rep = buildDebugReport(), blob = new Blob([JSON.stringify(rep, null, 2)], { type: 'application/json' }), a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = `emric-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    msg('Debug report saved. Send that file to the AI you are working with.');
-  } catch (e) { msg('Could not make the debug report: ' + ((e && e.message) || e)); }
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); instEvt = e; instTryShow(); });
+window.addEventListener('appinstalled', () => { lsSet(INST_KEY, 'installed'); instEvt = null; instHide(); try { msg('Emric was added to your home screen.'); } catch {} });
+$('#instgo').onclick = async () => {
+  if (instEvt) {
+    const e = instEvt; instEvt = null;   // a prompt can only be used once
+    try { e.prompt(); const r = await e.userChoice; lsSet(INST_KEY, r && r.outcome === 'accepted' ? 'installed' : String(Date.now())); } catch {}
+    instHide();
+  } else if ($('#inststeps').hidden) {   // iPhone / iPad: the browser has no install button to trigger, so show the steps
+    $('#instmsg').hidden = true; $('#inststeps').hidden = false; $('#instgo').textContent = 'Got it'; $('#instno').hidden = true;
+  } else { $('#instno').hidden = false; lsSet(INST_KEY, String(Date.now())); instHide(); }
 };
+$('#instno').onclick = () => { lsSet(INST_KEY, String(Date.now())); instHide(); };
+if (!instStandalone() && !instSnoozed()) instTimer = setInterval(instTryShow, 3000);
 
 /* ---------- start ---------- */
 document.body.classList.add('intro'); setTimeout(() => document.body.classList.remove('intro'), 1600);
