@@ -4007,7 +4007,7 @@ async function polarConnect() {
     u.searchParams.set('response_type', 'code');
     u.searchParams.set('client_id', String(cfg.client_id));
     u.searchParams.set('redirect_uri', polarRedirect());
-    u.searchParams.set('scope', POLAR_SCOPE);
+    // no scope: Polar AccessLink grants its data access from the client itself, and rejects unknown scopes with invalid_scope
     u.searchParams.set('state', st);
     stravaMsg('Sending you to Polar to approve access…');
     location.href = u.toString();
