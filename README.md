@@ -38,3 +38,7 @@ itsrelyt.github.io/Emric/
 
 - Removed the pace graph from the progress view. The average-pace summary text and everything else
   are unchanged.
+
+## reviews
+
+What caught my attention was building explainable running plans from goals, available days, imported activities, and daily feelings, then proposing user-approved adjustments and tracking adherence, records, and fitness trends. -anna
