@@ -338,8 +338,6 @@ img,svg,canvas{max-width:100%}
 .wc-note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media(max-width:640px),(pointer:coarse) and (max-height:500px){
   main{gap:16px}
-  header.row{gap:8px;flex-wrap:nowrap}
-  header .btn{padding:8px 16px;min-height:44px}
   /* coach: the mascot sits beside what it says, controls take the full width below */
   .coachbox{grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:center;padding:14px}
   .coachbox>div{display:contents}
@@ -453,6 +451,85 @@ img,svg,canvas{max-width:100%}
 
 .cal-title{white-space:nowrap}
 @media(max-width:700px){.cd-nav[data-cal=today]{font-size:.8125rem;padding:2px 12px}}
+
+/* ---------- phone UX: app-like shell, bottom navigation, sheets (laptop is untouched: everything below is scoped to phones) ---------- */
+.mi,.tab .tw,.fab,.cd-bar{display:none}
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
+  html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+  body{line-height:1.5}
+  input,select,textarea,.field{font-size:max(16px,1rem)}   /* 16px+ stops iOS zooming the page when a field is focused */
+  .btn:active,.chip:active,.tab:active,.cd:active{transform:scale(.97)}
+  /* header: a slim app bar; the menu opens as a sheet */
+  header.row{flex-wrap:wrap;gap:8px 12px;align-items:center;min-height:52px}
+  header.row>.row:first-child{flex:1;min-width:0}
+  #menu{display:grid;place-items:center;position:relative;width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;flex:none}
+  #menu .mi{display:block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+  #menu .cls,#menu[aria-expanded=true] .ham{display:none}
+  #menu[aria-expanded=true] .cls{display:block}
+  #menu .ml{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .dcar{display:none}
+  .tools{display:none}
+  .tools.open{display:grid;position:fixed;z-index:60;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));top:calc(max(16px,env(safe-area-inset-top)) + 58px);width:auto;gap:8px;padding:10px;background:var(--panel);border:1px solid #111;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+  .tools .btn,.dmenu>summary{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;padding:0 18px;border-radius:14px;text-align:left;flex:none}
+  .tools .btn::after,.dmenu>summary::after{content:'\203A';opacity:.55;font-size:1.4rem;line-height:1}
+  .dmenu[open]>summary::after{content:'\2304'}
+  .dmenu{flex:none;width:100%}
+  .dpop{padding:8px;margin-top:8px;border-radius:14px}
+  .dpop .btn{justify-content:flex-start;text-align:left}
+  .dpop .btn::after{display:none}
+  body:has(.tools.open)::before{content:'';position:fixed;inset:0;z-index:55;background:rgba(17,17,17,.4)}
+  /* coach screen: today first, then the plan, then the housekeeping */
+  #res>.two{display:contents}
+  #res>#planmsg{order:0}#res #today{order:1}#res>#weekbox{order:2}#res #insights{order:3}#res>#watch{order:4}#res>#updates{order:5}
+  #spanbox{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;background:var(--panel);border:1px solid #111;border-radius:999px;margin:0!important}
+  #spanbox .chip{border:0;background:transparent;justify-content:center;text-align:center;min-height:42px;border-radius:999px}
+  #spanbox .chip[aria-pressed=true]{background:#111;color:#fff}
+  .coachbox>div>.row:not(#feel){flex-wrap:nowrap;gap:8px}
+  #note{min-width:0;flex:1 1 auto}
+  #ask{width:auto;padding:0 20px;white-space:nowrap;flex:none}
+  #chat .row:has(#chatin){flex-wrap:nowrap;align-items:flex-end;gap:8px}
+  #chatin{min-width:0}
+  #chat .row:has(#chatin) .btn{flex:none;width:auto;padding:0 20px}
+  /* floating "log a workout" button */
+  body[data-tab=log] .fab{display:grid;place-items:center;position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:56px;height:56px;padding:0;border-radius:50%;border:1px solid #111;background:#111;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  html.d-phone.portrait body[data-tab=log] .fab{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  html.kb .fab{display:none!important}
+  .fab svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+  .fab:active{transform:scale(.94)}
+  /* settings, sign-in and import open full screen, with a title bar that stays put */
+  #settings:not([hidden]),#authpanel:not([hidden]),#stravapanel:not([hidden]){position:fixed;inset:0;z-index:80;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:0;margin:0;padding:0 max(16px,env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left))}
+  #settings>.row:first-child,#authpanel>.row:first-child,#stravapanel>.row:first-child{position:sticky;top:0;z-index:2;background:var(--panel);padding:max(12px,env(safe-area-inset-top)) 0 10px;border-bottom:1px solid #d9d9d9;flex-wrap:nowrap}
+  body:has(#settings:not([hidden])),body:has(#authpanel:not([hidden])),body:has(#stravapanel:not([hidden])){overflow:hidden}
+  /* edit workout: a bottom sheet */
+  #editmodal{align-items:flex-end;padding:0}
+  #editmodal .gatebox{width:100%;max-height:92vh;max-height:92dvh;overflow-y:auto;border-radius:20px 20px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+  /* calendar: the day's session slides up as a sheet instead of pushing the page down */
+  body.sheetlock{overflow:hidden}
+  html:has(body.sheetlock),html:has(#settings:not([hidden])),html:has(#authpanel:not([hidden])),html:has(#stravapanel:not([hidden])){overflow:hidden}   /* the page itself scrolls on <html>, so lock it there */
+  .cal .cd-detail{display:none;animation:none}
+  .cal.sheet-open .cd-detail{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:70;margin:0;max-height:84vh;max-height:84dvh;overflow-y:auto;overscroll-behavior:contain;border-width:1px 0 0;border-radius:22px 22px 0 0;padding:0 18px calc(24px + env(safe-area-inset-bottom,0px));background:var(--panel2);box-shadow:0 -12px 40px rgba(0,0,0,.25)}
+  .cal.sheet-open::after{content:'';position:fixed;inset:0;z-index:65;background:rgba(17,17,17,.45)}
+  .cal .cd-detail .cd-bar{display:flex;position:sticky;top:0;z-index:1;align-items:center;justify-content:flex-end;gap:8px;min-height:56px;margin:0 -18px 4px;padding:18px 14px 6px;background:var(--panel2);touch-action:none}
+  .cd-grip{position:absolute;top:8px;left:50%;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#b5b5b5}
+  .cd-bar-b{display:flex;gap:8px}
+  .cd-bar-b .chip{min-width:44px;min-height:44px;justify-content:center;text-align:center;font-size:1.125rem;padding:0 12px}
+  .cd-bar-b .chip:disabled{opacity:.35}
+}
+@media(max-width:640px) and (prefers-reduced-motion:no-preference),(pointer:coarse) and (max-height:500px) and (prefers-reduced-motion:no-preference){
+  .cal .cd-detail.enter{animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}
+  .tools.open{animation:mDrop .18s ease-out}
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+/* phone in portrait: icon tab bar at the thumb */
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
+  html.d-phone.portrait .tabs{gap:0;padding:6px max(8px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left));background:var(--panel);border-top:1px solid #111}
+  html.d-phone.portrait .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:2px 0;border:0;border-radius:14px;background:transparent;color:var(--mute);font:600 .75rem/1.1 var(--disp)}
+  html.d-phone.portrait .tab[aria-selected=true]{background:transparent;color:#111;font-weight:700}
+  html.d-phone.portrait .tab .tw{display:grid;place-items:center;width:60px;height:30px;border-radius:999px;transition:background-color .2s,color .2s}
+  html.d-phone.portrait .tab[aria-selected=true] .tw{background:#111;color:#fff}
+  html.d-phone.portrait .tab .ti{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  html.d-phone.portrait main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+}
 </style>
 </head>
 <body>
@@ -591,10 +668,10 @@ img,svg,canvas{max-width:100%}
 <main>
   <header class="row between">
     <div class="row" style="flex-wrap:nowrap;gap:12px"><h1 id="logo"></h1><button class="sdot" id="syncpill" type="button" data-s="off" aria-label="Not synced. Sign in to sync." title="Not synced. Sign in to sync."></button></div>
-    <button class="btn" id="menu" aria-expanded="false" aria-controls="tools">Menu</button>
+    <button class="btn" id="menu" aria-expanded="false" aria-controls="tools" aria-label="Menu"><svg class="mi ham" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="mi cls" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="ml">Menu</span></button>
     <div class="row tools" id="tools">
       <button class="btn sky" id="authbtn">Sign in</button>
-      <details class="dmenu" id="dmenu"><summary class="btn mint">Data ▾</summary>
+      <details class="dmenu" id="dmenu"><summary class="btn mint">Data <span class="dcar" aria-hidden="true">▾</span></summary>
         <div class="dpop">
           <label class="btn sky">Import CSV / JSON<input id="file" class="sr" type="file" accept=".csv,.json,text/csv,application/json"></label>
           <button class="btn sky" id="stravabtn">Import from Strava, Garmin or Polar</button>
@@ -748,9 +825,9 @@ img,svg,canvas{max-width:100%}
   <p id="syncstat" class="mute sm" role="status" style="margin:0" hidden></p>
 
   <nav id="tabs" class="tabs" role="tablist" aria-label="Sections" hidden>
-    <button class="tab" role="tab" data-t="coach" aria-selected="true">Coach</button>
-    <button class="tab" role="tab" data-t="prog" aria-selected="false">Progress</button>
-    <button class="tab" role="tab" data-t="log" aria-selected="false">Log</button>
+    <button class="tab" role="tab" data-t="coach" aria-selected="true"><span class="tw"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tl">Coach</span></button>
+    <button class="tab" role="tab" data-t="prog" aria-selected="false"><span class="tw"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6"/></svg></span><span class="tl">Progress</span></button>
+    <button class="tab" role="tab" data-t="log" aria-selected="false"><span class="tw"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg></span><span class="tl">Log</span></button>
   </nav>
   <div id="p-coach" class="stack">
   <section class="px coachbox">
@@ -845,6 +922,7 @@ img,svg,canvas{max-width:100%}
     <a class="mute xs" href="mailto:tyl3rbuch@outlook.com" style="color:inherit;text-decoration:underline">Contact: tyl3rbuch@outlook.com</a>
     <span>© 2026 Emric (Emric.app) — Tyler Buchanan</span>
   </div>
+  <button type="button" class="fab" id="fablog" aria-label="Log a workout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </main>
 
 <script>
@@ -949,7 +1027,7 @@ function card(w) {
   return `<div class="wcard"><div class="row wc-top"><span class="mute sm">${esc(w.date)}</span><span class="chip" style="cursor:default">${esc(w.type)}</span></div><div class="d wc-title">${esc(w.title)}</div>${stats ? `<div class="wc-stats">${stats}</div>` : ''}${n ? `<div class="wc-note mute xs" title="${esc(n)}">${esc(n)}</div>` : ''}<button class="edt" data-edit="${esc(w.id)}" aria-label="Edit ${esc(w.title)} on ${esc(w.date)}" title="Edit">✎</button><button class="del" data-id="${esc(w.id)}" aria-label="Delete ${esc(w.title)} on ${esc(w.date)}">✕</button></div>`;
 }
 function applyLayout() {
-  { const nt = $('#note'); if (nt) nt.placeholder = isMobile() ? 'How do you feel today?' : 'How do you feel today? Sore, tired, fresh…'; }
+  { const nt = $('#note'); if (nt) nt.placeholder = isMobile() ? 'How do you feel?' : 'How do you feel today? Sore, tired, fresh…'; const ci = $('#chatin'); if (ci) ci.placeholder = isMobile() ? 'Ask your coach…' : 'Ask about your plan or how you feel… (Enter sends, Shift+Enter adds a line)'; }
   document.querySelectorAll('.sec').forEach((d, i) => { d.open = (i === 0); });
   drawCoach();
   try { if (coachLast && coachLast.data) renderResults(coachLast.data); } catch (e) { console.error('render failed', e); }
@@ -957,6 +1035,10 @@ function applyLayout() {
 mq.addEventListener('change', applyLayout);
 $('#menu').onclick = () => { const o = $('#tools').classList.toggle('open'); $('#menu').setAttribute('aria-expanded', String(o)); };
 $('#tools').addEventListener('click', (e) => { if (isMobile() && !e.target.closest('#dmenu>summary')) setTimeout(() => { $('#tools').classList.remove('open'); $('#menu').setAttribute('aria-expanded', 'false'); }, 300); });
+// phones: the menu is a sheet over a dimmed page, so a tap outside it or Escape closes it
+const closeMenu = () => { $('#tools').classList.remove('open'); $('#menu').setAttribute('aria-expanded', 'false'); };
+document.addEventListener('click', (e) => { if (isMobile() && $('#tools').classList.contains('open') && !e.target.closest('#tools,#menu')) closeMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#tools').classList.contains('open')) { closeMenu(); $('#menu').focus(); } });
 
 /* ---------- CSV / JSON ---------- */
 function parseCSV(text) {
@@ -1265,7 +1347,7 @@ const CAL_STATUS = { done: 'Done', changed: 'Changed', missed: 'Missed' };
 const calClass = (k) => (k === 'rest' || k === 'active recovery' ? 'rest' : HARD.includes(k) ? 'hard' : 'easy');
 const calMon = (s) => s.slice(0, 7);
 const calMonday = (s) => addDays(s, -mondayIdx(dn(s)));
-let cal = null, calSel = null, calMonth = null;   // cal: what the calendar draws (set on every renderResults); calSel / calMonth: what the person picked
+let cal = null, calSel = null, calMonth = null, calSheet = false;   // calSheet: on phones the chosen day's session opens as a bottom sheet   // cal: what the calendar draws (set on every renderResults); calSel / calMonth: what the person picked
 
 // Which days are on screen: a 7-day (or very short) plan shows just the weeks it touches; a longer plan shows one month at a time.
 function calRange() {
@@ -1303,7 +1385,9 @@ function calDetail(date) {
     : st.s === 'changed' ? `<p class="sm" style="margin:0">You logged ${esc(st.text)}, which differs from the plan${st.why ? ` (${esc(st.why)})` : ''}.</p>`
     : st.s === 'missed' ? '<p class="sm c-berry" style="margin:0">No workout was logged for this day.</p>' : '';
   const plan = (t && t.plan) || x.plan || '';
+  const ds = Object.keys(cal.info).sort(), di = ds.indexOf(date);
   return `<div class="cd-detail" role="region" aria-label="${esc(dayLabel(date))}">`
+    + `<div class="cd-bar"><span class="cd-grip" aria-hidden="true"></span><span class="cd-bar-b"><button type="button" class="chip" data-cal="dprev" aria-label="Previous day"${di <= 0 ? ' disabled' : ''}>‹</button><button type="button" class="chip" data-cal="dnext" aria-label="Next day"${di >= ds.length - 1 ? ' disabled' : ''}>›</button><button type="button" class="chip cd-x" data-cal="close" aria-label="Close">✕</button></span></div>`
     + `<div class="row"><span class="badge">${esc(CAL_NAME[k] || k)}</span><h3 class="cd-h">${esc(dayLabel(date))}${date === cal.today ? ' · Today' : ''}</h3>`
     + `${CAL_STATUS[st.s] ? `<span class="st st-${st.s}">${CAL_STATUS[st.s]}</span>` : ''}${it.tag ? `<span class="chip cd-tag">${esc(it.tag)}</span>` : ''}</div>`
     + `${x.note ? `<p class="sm c-berry" style="margin:0">${esc(x.note)}</p>` : ''}${status}`
@@ -1311,8 +1395,9 @@ function calDetail(date) {
     + `<dl>${dl('Target', t && t.target)}${dl('Duration', t && t.duration)}${dl('Distance', km)}${dl('Why', t && t.why)}${dl('If you feel worse', t && t.swap_if_worse)}</dl>`
     + `${cal.weekLine ? cal.weekLine(date) : ''}</div>`;
 }
-function calDraw(focusDate) {
+function calDraw(focus, opening) {
   const box = $('#cal'); if (!box || !cal) return;
+  calSheet = calSheet && isMobile();
   const { info, first, today } = cal;
   if (!calSel || !info[calSel]) calSel = info[today] ? today : first;
   const r = calRange(), cells = [];
@@ -1328,25 +1413,34 @@ function calDraw(focusDate) {
     + `<div class="cal-grid" role="group" aria-label="Training calendar, ${esc(title)}">${cells.map(calCell).join('')}</div>`
     + `<div class="cal-legend xs mute"><span><i class="lg hard"></i>Hard</span><span><i class="lg easy"></i>Easy</span><span><i class="lg rest"></i>Rest</span><span>✓ done</span><span>~ changed</span><span>✗ missed</span><span class="u-note">numbers are ${unitLabel()}</span>${anyRace ? '<span>★ goal day</span>' : ''}${anyAuto ? '<span>◆ outline</span>' : ''}</div>`
     + calDetail(calSel);
-  if (focusDate) { const b = box.querySelector(`.cd[data-date="${focusDate}"]`); if (b) b.focus({ preventScroll: true }); }
+  box.classList.toggle('sheet-open', calSheet); document.body.classList.toggle('sheetlock', calSheet);
+  if (opening) { const dt = box.querySelector('.cd-detail'); if (dt) dt.classList.add('enter'); }
+  if (focus) { const b = /^\d{4}-/.test(focus) ? box.querySelector(`.cd[data-date="${focus}"]`) : box.querySelector(focus); if (b) b.focus({ preventScroll: true }); }
 }
-function calSelect(date, focus) {
+function calSelect(date, focus, open) {
   if (!cal || !cal.info[date]) return;
   const r = calRange();
   if (r.month && (date < r.from || date > r.to)) calMonth = calMon(date);
-  calSel = date; calDraw(focus ? date : null);
+  calSel = date;
+  if (open && isMobile()) calSheet = true;
+  calDraw(focus === true ? date : focus || null, !!open && calSheet);
 }
+function calClose() { if (!calSheet) return; calSheet = false; if (cal) calDraw(calSel); else document.body.classList.remove('sheetlock'); }
 (() => {
   const box = $('#weekbox');
   box.addEventListener('click', (e) => {
     const day = e.target.closest('.cd[data-date]'), nav = e.target.closest('[data-cal]');
+    if (calSheet && e.target.id === 'cal') return calClose();   // the dimmed area behind the sheet
     if (day) {
-      calSelect(day.dataset.date, true);
-      const dt = $('#cal .cd-detail');   // keep the chosen day's session in view on small screens
-      if (dt) { const rc = dt.getBoundingClientRect(); if (rc.top < 0 || rc.bottom > innerHeight - 90) dt.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+      const mob = isMobile();
+      calSelect(day.dataset.date, mob ? '.cd-x' : true, mob);
+      const dt = $('#cal .cd-detail');   // laptop: keep the chosen day's session in view
+      if (!mob && dt) { const rc = dt.getBoundingClientRect(); if (rc.top < 0 || rc.bottom > innerHeight - 90) dt.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
     } else if (nav && cal && !nav.disabled) {
       const act = nav.dataset.cal;
-      if (act === 'today') { calSel = cal.info[cal.today] ? cal.today : cal.first; calMonth = calMon(calSel); calDraw(); }
+      if (act === 'close') calClose();
+      else if (act === 'dprev' || act === 'dnext') { const ds = Object.keys(cal.info).sort(), i = ds.indexOf(calSel) + (act === 'dnext' ? 1 : -1); if (ds[i]) calSelect(ds[i], `[data-cal="${act}"]`, false); }
+      else if (act === 'today') { calSel = cal.info[cal.today] ? cal.today : cal.first; calMonth = calMon(calSel); calDraw(); }
       else { const r = calRange(), y = +r.m.slice(0, 4), mo = +r.m.slice(5, 7) - 1 + (act === 'next' ? 1 : -1); calMonth = new Date(Date.UTC(y, mo, 1)).toISOString().slice(0, 7); calDraw(); }
     }
   });
@@ -1355,8 +1449,15 @@ function calSelect(date, focus) {
     const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
     if (!step) return;
     e.preventDefault(); const t = addDays(b.dataset.date, step);
-    if (cal.info[t]) calSelect(t, true);
+    if (cal.info[t]) calSelect(t, true, false);
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && calSheet) calClose(); });
+  // swipe the sheet down by its handle to dismiss it
+  let drag = null;
+  box.addEventListener('pointerdown', (e) => { const bar = e.target.closest('.cd-bar'); if (!bar || e.target.closest('button')) return; drag = { y: e.clientY, dt: bar.closest('.cd-detail'), dy: 0 }; try { bar.setPointerCapture(e.pointerId); } catch (x) {} });
+  box.addEventListener('pointermove', (e) => { if (!drag) return; drag.dy = Math.max(0, e.clientY - drag.y); drag.dt.style.transition = 'none'; drag.dt.style.transform = `translateY(${drag.dy}px)`; });
+  const endDrag = () => { if (!drag) return; const { dt, dy } = drag; drag = null; if (dy > 90) calClose(); else { dt.style.transition = 'transform .2s'; dt.style.transform = ''; } };
+  box.addEventListener('pointerup', endDrag); box.addEventListener('pointercancel', endDrag);
 })();
 function renderResults(d) {
   const today = todayStr(), a = analyze(ws, today, { profile, feeling, note: '', prev: null });
@@ -1366,7 +1467,7 @@ function renderResults(d) {
   const i0 = d.week.findIndex((x) => x.date >= today);
   if (i0 < 0) {
     $('#today').innerHTML = '<h2>Plan finished</h2><p style="margin:0">Your last plan has run out. Tap Ask coach for a fresh one.</p>';
-    $('#insights').hidden = true; $('#weekbox').innerHTML = ''; $('#watch').hidden = true; renderSpanToggle(); return;
+    $('#insights').hidden = true; $('#weekbox').innerHTML = ''; calSheet = false; document.body.classList.remove('sheetlock'); $('#watch').hidden = true; renderSpanToggle(); return;
   }
   $('#insights').hidden = false;
   const item = d.week[i0], t = todayDetail(item, a), st = dayStatus(item, today, a);
@@ -2998,8 +3099,11 @@ function showTab(t) {
   ['coach', 'prog', 'log'].forEach((k) => { $('#p-' + k).hidden = k !== tab; });
   document.querySelectorAll('#tabs .tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === tab)));
   $('#logform').hidden = ws.length ? tab !== 'log' : false;
+  document.body.dataset.tab = tab;
+  if (typeof calClose === 'function') calClose();   // a session sheet never stays open behind another tab
   lsSet('pp.tab', tab);
 }
+$('#fablog').onclick = () => { const f = $('#logform'); f.open = true; f.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 $('#tabs').onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) { showTab(b.dataset.t); setPref('tab', tab); } };
 renderChat();
 
