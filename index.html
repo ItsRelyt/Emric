@@ -3397,7 +3397,7 @@ function wipeLocal() {   // forget everything stored for the previous account on
   Object.assign(lookClean, CLEAN_DEFAULT); lsSet('pp.lookc', JSON.stringify(lookClean));   // drop the previous account's coach look too
   fillLookSelects(); setLogo(); drawCoach();
   lsSet('pp.prefs', '{}'); lsSet('pp.dirty', ''); lsSet('pp.lastsync', '0'); lsSet('pp.uid', ''); lsSet('pp.chat', '[]'); lsSet('pp.chatclr', '0');
-  lsSet('pp.strava.last', ''); lsSet('pp.polar.tok', ''); lsSet('pp.polar.state', ''); lsSet('pp.polar.member', ''); lsSet('pp.polar.from', '');   // import history and Polar link belong to the account that was signed in
+  lsSet('pp.strava.last', ''); lsSet('pp.polar.tok', ''); polarLink = cleanPolar(null); lsSet('pp.polar.link', ''); lsSet('pp.polar.state', ''); lsSet('pp.polar.member', ''); lsSet('pp.polar.from', '');   // import history and Polar link belong to the account that was signed in
   save(false); renderChat(); restoreCoach(); fillProfile(); renderDash();
   if (typeof stravaLast === 'function') stravaLast();
   if (typeof polarUi === 'function') polarUi();
@@ -3579,9 +3579,11 @@ function cleanChat(c) {
   }
   return { msgs: [...seen.values()].sort((p, r) => p.at - r.at).slice(-CHAT_CAP), clearedAt: clr };
 }
-const canon = (s) => ({ v: 2, workouts: (s.workouts || []).map((w) => ({ id: w.id, date: w.date, type: w.type, title: w.title, km: w.km, sec: w.sec, pace: w.pace, hr: w.hr, elev: w.elev, notes: w.notes, ts: w.ts })).sort((a, b) => (a.id < b.id ? -1 : 1)), dead: Object.fromEntries(Object.entries(s.dead || {}).sort()), coach: s.coach || null, profile: cleanProfile(s.profile), prefs: cleanPrefs(s.prefs), chat: cleanChat(s.chat) });
-const snapshot = () => canon({ workouts: ws, dead, coach: coachLast, profile, prefs, chat: { msgs: chat, clearedAt: chatClr } });
-const remoteCanon = (r) => canon({ workouts: (Array.isArray(r.workouts) ? r.workouts : []).map(sane).filter(Boolean), dead: cleanDead(r.dead), coach: okCoach(r.coach) ? r.coach : null, profile: r.profile, prefs: r.prefs, chat: r.chat });
+const cleanPolar = (p) => { p = p && typeof p === 'object' ? p : {}; return { t: typeof p.t === 'string' ? p.t.slice(0, 600) : '', u: String(p.u || '').slice(0, 64), at: nOrNull(p.at) ?? 0 }; };   // t = Polar access token ('' once disconnected), at = when it last changed (newest wins)
+let polarLink = (() => { try { return cleanPolar(JSON.parse(lsGet('pp.polar.link', 'null'))); } catch { return cleanPolar(null); } })();
+const canon = (s) => ({ v: 2, workouts: (s.workouts || []).map((w) => ({ id: w.id, date: w.date, type: w.type, title: w.title, km: w.km, sec: w.sec, pace: w.pace, hr: w.hr, elev: w.elev, notes: w.notes, ts: w.ts })).sort((a, b) => (a.id < b.id ? -1 : 1)), dead: Object.fromEntries(Object.entries(s.dead || {}).sort()), coach: s.coach || null, profile: cleanProfile(s.profile), prefs: cleanPrefs(s.prefs), chat: cleanChat(s.chat), polar: cleanPolar(s.polar) });
+const snapshot = () => canon({ workouts: ws, dead, coach: coachLast, profile, prefs, chat: { msgs: chat, clearedAt: chatClr }, polar: polarLink });
+const remoteCanon = (r) => canon({ workouts: (Array.isArray(r.workouts) ? r.workouts : []).map(sane).filter(Boolean), dead: cleanDead(r.dead), coach: okCoach(r.coach) ? r.coach : null, profile: r.profile, prefs: r.prefs, chat: r.chat, polar: r.polar });
 
 function mergeState(a, b) {
   const d = { ...a.dead }; for (const [k, t] of Object.entries(b.dead)) d[k] = Math.max(d[k] || 0, t);
@@ -3592,7 +3594,7 @@ function mergeState(a, b) {
   const mp = {}; for (const k of new Set([...Object.keys(a.prefs), ...Object.keys(b.prefs)])) { const x = a.prefs[k], y = b.prefs[k]; mp[k] = !x ? y : !y ? x : y.at > x.at ? y : x; }
   const cl = Math.max(a.chat.clearedAt, b.chat.clearedAt), cm = new Map();
   for (const x of [...a.chat.msgs, ...b.chat.msgs]) if (x.at > cl) cm.set(ckey(x), x);
-  return { workouts: [...m.values()].filter((w) => !(d[w.id] >= w.ts)), dead: d, coach, profile: pr, prefs: mp, chat: { msgs: [...cm.values()].sort((p, r) => p.at - r.at).slice(-CHAT_CAP), clearedAt: cl } };
+  return { workouts: [...m.values()].filter((w) => !(d[w.id] >= w.ts)), dead: d, coach, profile: pr, prefs: mp, chat: { msgs: [...cm.values()].sort((p, r) => p.at - r.at).slice(-CHAT_CAP), clearedAt: cl }, polar: b.polar.at > a.polar.at ? b.polar : a.polar };
 }
 
 const netErr = (e) => (e instanceof TypeError ? 'Sync failed: network error. Check internet connection.' : 'Sync failed: ' + (e.message || e));
@@ -3629,7 +3631,7 @@ async function syncNow(manual) {
       const rc = remoteCanon((row && row.data) || {}), oldPrefs = prefs, chatBefore = JSON.stringify(chat);
       const coachBefore = coachLast && (coachLast.rev || coachLast.at), knownIds = new Set(ws.map((w) => w.id)), dv0 = dv;
       const m = mergeState(snapshot(), rc);
-      ws = m.workouts; dead = m.dead; coachLast = m.coach; profile = m.profile; prefs = m.prefs; chat = m.chat.msgs; chatClr = m.chat.clearedAt;
+      ws = m.workouts; dead = m.dead; coachLast = m.coach; profile = m.profile; prefs = m.prefs; chat = m.chat.msgs; chatClr = m.chat.clearedAt; polarLink = m.polar; lsSet('pp.polar.link', JSON.stringify(polarLink));
       lsSet('pp.prefs', JSON.stringify(prefs)); lsSet('pp.chat', JSON.stringify(chat)); lsSet('pp.chatclr', String(chatClr)); save(false);
       const merged = snapshot();
       lastVer = row ? row.updated_at : '';
@@ -3647,7 +3649,7 @@ async function syncNow(manual) {
       lastSyncAt = Date.now(); lsSet('pp.lastsync', String(lastSyncAt)); syncErr = ''; retryMs = 0;
       applyPrefs(oldPrefs, firstApply); firstApply = false;
       const freshIds = ws.filter((w) => !knownIds.has(w.id)).map((w) => w.id);
-      renderDash(); fillProfile(); if (JSON.stringify(chat) !== chatBefore) renderChat();
+      renderDash(); fillProfile(); polarUi(); if (JSON.stringify(chat) !== chatBefore) renderChat();
       if ((coachLast && (coachLast.rev || coachLast.at)) !== coachBefore) restoreCoach();
       if (freshIds.length) reconcile(freshIds);
       startRealtime();
@@ -3934,13 +3936,16 @@ async function importFile(f) {
 
 /* ---------- Polar sync: exercises through supabase/functions/polar (AccessLink is free) ---------- */
 const POLAR_AUTH = 'https://flow.polar.com/oauth2/authorization', POLAR_SCOPE = 'readatlas.exercise';
-const polarTok = () => { try { return JSON.parse(lsGet('pp.polar.tok', 'null')) || null; } catch { return null; } };
-const polarSetTok = (t) => lsSet('pp.polar.tok', t ? JSON.stringify(t) : '');
+// The Polar link (token + Polar user id) is part of the account data, so it syncs through Supabase like everything else
+// and every signed-in device can auto-sync Polar. polarLink itself is declared next to the sync code (cleanPolar / polarLink).
+const polarTok = () => (polarLink.t ? { access_token: polarLink.t, user_id: polarLink.u } : null);
+const polarSetTok = (t) => { polarLink = cleanPolar({ t: t ? t.access_token : '', u: t ? t.user_id : '', at: Date.now() }); lsSet('pp.polar.link', JSON.stringify(polarLink)); markDirty(); schedulePush(); };
+(() => { try { const o = JSON.parse(lsGet('pp.polar.tok', 'null')); if (o && o.access_token && !polarLink.t) polarSetTok(o); if (o) lsSet('pp.polar.tok', ''); } catch {} })();   // one-time move of a token an older version kept only in this browser
 const polarRedirect = () => location.origin + location.pathname;   // Polar Flow needs the exact URI registered in its team settings
 // The OAuth round-trip only survives if we're back on the same origin that started it.
 const polarSameOrigin = (() => { try { return !!lsGet('pp.polar.from') && new URL(lsGet('pp.polar.from')).origin === location.origin; } catch { return false; } })();
 function polarUi() {
-  const t = polarTok(), on = !!(t && t.access_token);
+  const on = !!polarTok();
   const uri = $('#polarredirect');
   if (uri) { uri.hidden = on; uri.textContent = on ? '' : `Redirect URI: ${polarRedirect()}`; }   // only needed when setting up
   const c = $('#polarconnect'), y = $('#polarsync'), d = $('#polardisconnect');
@@ -3985,7 +3990,7 @@ async function polarSync(silent) {
   say('Looking for exercises on Polar…');
   try {
     const t = polarTok();
-    if (!t || !t.access_token) throw new Error('Connect Polar first.');
+    if (!t) throw new Error('Connect Polar first.');
     const d = await polarApi({ action: 'exercises', access_token: t.access_token });
     const list = Array.isArray(d.exercises) ? d.exercises : [];
     if (!list.length) { say('No Polar exercises to import. Polar only shares sessions recorded or changed after you connected it, so give it a run first.'); return; }
@@ -4004,8 +4009,7 @@ async function polarSync(silent) {
 const POLAR_EVERY = 10 * 60 * 1000;
 function polarAuto() {
   try {
-    const t = polarTok();
-    if (!t || !t.access_token || !currentUser || polarBusy || !navigator.onLine || document.visibilityState !== 'visible') return;
+    if (!polarTok() || !currentUser || polarBusy || !navigator.onLine || document.visibilityState !== 'visible') return;
     if (Date.now() - (+lsGet('pp.polar.auto', '0') || 0) < POLAR_EVERY) return;
     lsSet('pp.polar.auto', String(Date.now()));   // stamped before the call, so a failure also waits its turn instead of retrying every sync
     polarSync(true);
@@ -4053,7 +4057,7 @@ async function polarLanded() {
 $('#polarconnect').onclick = () => { polarConnect(); };
 $('#polarsync').onclick = () => { lsSet('pp.polar.auto', String(Date.now())); polarSync(); };
 $('#polardisconnect').onclick = () => {
-  if (!confirm('Disconnect Polar on this device? The workouts you already imported stay in your log.')) return;
+  if (!confirm('Disconnect Polar from your Emric account (all your devices)? The workouts you already imported stay in your log.')) return;
   polarSetTok(null); polarUi(); stravaMsg('Polar disconnected. You can connect again any time.');
 };
 polarUi();
