@@ -3653,6 +3653,7 @@ async function syncNow(manual) {
       startRealtime();
     }
     if (!ok) throw new Error('Another device was saving at the same moment. Retrying shortly.');
+    polarAuto();
     syncMsg(manual ? 'Synced with your account at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
   } catch (e) {
     const expired = /jwt|expired|401/i.test(String((e && (e.message || e.code || e.status)) || ''));
@@ -3975,24 +3976,40 @@ function polarWorkout(x) {
   const type = stravaType(x.sport), tag = x.id ? `[polar://${String(x.id).replace(/[^\w]/g, '')}]` : '';
   return sane({ date, type, title: type, km, sec, pace: km > 0 && sec > 0 ? Math.round(sec / km) : null, hr: num(x.hr), elev: null, notes: tag, ts: Date.now() });
 }
-async function polarSync() {
-  const btn = $('#polarsync');
-  if (btn) btn.disabled = true;
-  stravaMsg('Looking for exercises on Polar…');
+let polarBusy = false;
+async function polarSync(silent) {
+  if (polarBusy) return;
+  polarBusy = true;
+  const btn = $('#polarsync'), say = (t, bad) => { if (!silent) stravaMsg(t, bad); };   // automatic runs stay quiet unless something new arrives
+  if (btn && !silent) btn.disabled = true;
+  say('Looking for exercises on Polar…');
   try {
     const t = polarTok();
     if (!t || !t.access_token) throw new Error('Connect Polar first.');
     const d = await polarApi({ action: 'exercises', access_token: t.access_token });
     const list = Array.isArray(d.exercises) ? d.exercises : [];
-    if (!list.length) { stravaMsg('No Polar exercises to import. Polar only shares sessions recorded or changed after you connected it, so give it a run first.'); return; }
+    if (!list.length) { say('No Polar exercises to import. Polar only shares sessions recorded or changed after you connected it, so give it a run first.'); return; }
     const items = list.map(polarWorkout).filter(Boolean);
-    if (!items.length) { stravaMsg('Those Polar exercises had no date or duration, so nothing was added.', true); return; }
+    if (!items.length) { say('Those Polar exercises had no date or duration, so nothing was added.', true); return; }
     const r = importWorkouts(items), dup = items.length - r.added;
     stravaMsg(`${r.added} new activit${r.added === 1 ? 'y' : 'ies'} imported from Polar${dup > 0 ? `, ${dup} already in your log` : ''}.`);
+    if (silent && r.added) msg(`${r.added} new workout${r.added === 1 ? '' : 's'} imported from Polar.`);
     if (r.fresh.length) reconcile(r.fresh);
     stampStrava();
-  } catch (e) { stravaMsg(e.message || 'Polar sync failed.', true); }
-  finally { if (btn) btn.disabled = false; }
+  } catch (e) { if (silent) console.warn('Polar auto-sync skipped:', e && e.message); else stravaMsg(e.message || 'Polar sync failed.', true); }
+  finally { polarBusy = false; if (btn) btn.disabled = false; }
+}
+// Runs after every successful Supabase sync. Polar's AccessLink API has request limits and is meant to be polled gently,
+// so this only goes to Polar at most once every 10 minutes per device (the 45-second Supabase sync does not).
+const POLAR_EVERY = 10 * 60 * 1000;
+function polarAuto() {
+  try {
+    const t = polarTok();
+    if (!t || !t.access_token || !currentUser || polarBusy || !navigator.onLine || document.visibilityState !== 'visible') return;
+    if (Date.now() - (+lsGet('pp.polar.auto', '0') || 0) < POLAR_EVERY) return;
+    lsSet('pp.polar.auto', String(Date.now()));   // stamped before the call, so a failure also waits its turn instead of retrying every sync
+    polarSync(true);
+  } catch (e) { console.warn('Polar auto-sync skipped:', e && e.message); }
 }
 async function polarConnect() {
   stravaMsg('');
@@ -4034,7 +4051,7 @@ async function polarLanded() {
   } catch (e) { stravaMsg(e.message || 'Could not finish the Polar connection.', true); polarUi(); }
 }
 $('#polarconnect').onclick = () => { polarConnect(); };
-$('#polarsync').onclick = () => { polarSync(); };
+$('#polarsync').onclick = () => { lsSet('pp.polar.auto', String(Date.now())); polarSync(); };
 $('#polardisconnect').onclick = () => {
   if (!confirm('Disconnect Polar on this device? The workouts you already imported stay in your log.')) return;
   polarSetTok(null); polarUi(); stravaMsg('Polar disconnected. You can connect again any time.');
