@@ -530,6 +530,94 @@ img,svg,canvas{max-width:100%}
   html.d-phone.portrait .tab .ti{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   html.d-phone.portrait main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 }
+/* ---------- phone declutter pass: calmer surfaces, fewer words, one-line scrollers (desktop untouched) ---------- */
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
+  body{background-image:none}
+  main{gap:12px}
+  h1{font-size:1.3rem}h2{font-size:1.1rem}
+  .px{padding:14px;border-radius:14px}
+  .stack{gap:12px}
+  /* coach header: smaller mascot, tighter chips */
+  .coachbox{padding:12px;gap:10px 12px}
+  .coachbox .sprite{padding:4px;border-radius:10px}
+  .coachbox .sprite svg{width:56px;height:auto;display:block}
+  .coachbox .say{font-size:1rem}
+  #feel{gap:4px}
+  #feel .chip{min-height:36px;padding:6px 0;font-size:.75rem}
+  /* rows of chips scroll sideways in one line instead of wrapping into a pile */
+  #chatchips,#modes{flex-wrap:nowrap;overflow-x:auto;gap:8px;margin:0 -14px;padding:0 14px 2px;scrollbar-width:none}
+  #chatchips::-webkit-scrollbar,#modes::-webkit-scrollbar,#chips::-webkit-scrollbar{display:none}
+  #chatchips>*,#modes>*,#chips>*{flex:none;white-space:nowrap}
+  #chips{scrollbar-width:none}
+  .chip{padding:6px 12px;min-height:36px}
+  /* plan cards */
+  #updates{gap:10px}
+  .week .px{padding:10px 12px;border-radius:12px}
+  .cal{padding:10px 8px}
+  .cal-legend{font-size:.75rem;gap:2px 10px}
+  /* progress */
+  .tiles{gap:8px}
+  .tile{flex-direction:row;align-items:center;gap:10px;padding:12px;border-radius:12px}
+  .tile svg{width:28px}
+  .big{font-size:1.2rem}
+  .recap-grid{gap:6px}
+  .rstat{padding:8px}
+  .bars{height:96px;gap:4px}
+  /* log */
+  #more{width:100%}
+  #q{width:100%;flex:1 1 100%}
+  .wcard{padding:12px 14px;border-radius:12px;background:var(--panel)}
+  /* forms: placeholders already say it, so drop the repeated help text */
+  #add p.mute.xs,#editform p.mute.xs,#editsub{display:none}
+  #add{gap:10px}
+  #editform{gap:12px}
+  #editsavebar{flex-wrap:nowrap;gap:8px}
+  #editsavebar .btn{flex:1;min-width:0}
+  /* footer: small print stays on the coach screen only, links stack neatly */
+  #foot{font-size:.75rem;line-height:1.45}
+  body[data-tab=prog] #foot,body[data-tab=log] #foot{display:none}
+  #footrow{flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:8px}
+  /* cookie + install banners: compact, buttons side by side */
+  #ckbanner .gatebox,#installbanner .gatebox{padding:12px 14px;gap:8px;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+  #ckbanner p.mute{display:none}
+  #ckbanner .row,#installbanner .row{flex-wrap:nowrap;gap:8px}
+  #ckbanner .row .btn,#installbanner .row .btn{flex:1;min-width:0;padding:0 10px;min-height:44px;justify-content:center;text-align:center}
+}
+/* ---------- phone app feel: sheets, floating toast, sticky bars, messenger-style chat ---------- */
+@media(max-width:640px),(pointer:coarse) and (max-height:500px){
+  body{background:#f4f4f5}
+  header.row{position:sticky;top:0;z-index:25;background:#f4f4f5;padding:6px 0;margin:0}
+  /* surfaces: soft cards instead of hard outlines (status cards keep their colours) */
+  .px:not(.ok):not(.warn):not(.hot),.tile,.rstat,.cal{border-color:#e0e0e3;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .px.hot{border-width:2px;border-radius:18px}
+  #today .badge{font-size:.8125rem}
+  #today h2{font-size:1.3rem;line-height:1.2}
+  /* toast */
+  #msg:not([hidden]){position:fixed;z-index:100;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);margin:0;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+  /* tab bar: frosted */
+  html.d-phone.portrait .tabs{background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top-color:#e0e0e3}
+  /* chat: bubbles + composer pinned above the tab bar */
+  .bub{border-radius:18px;border-color:transparent;padding:10px 14px;max-width:86%}
+  .bub.me{border-bottom-right-radius:6px}.bub.coach{border-bottom-left-radius:6px;background:#efefef}
+  #chat .row:has(#chatin){position:sticky;bottom:0;z-index:5;background:var(--panel);padding:8px 0 0;margin:0}
+  html.d-phone.portrait #chat .row:has(#chatin){bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  html.kb #chat .row:has(#chatin),html.d-phone.portrait.kb #chat .row:has(#chatin){bottom:0}
+  #chatin{border-radius:22px}
+  #chat .row:has(#chatin) .btn{border-radius:50%;width:48px;height:48px;padding:0}
+  /* log a workout: bottom sheet opened by the + button */
+  #logform[open]{position:fixed;z-index:90;left:0;right:0;bottom:0;margin:0;max-height:88dvh;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:22px 22px 0 0;padding:0 18px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.25)}
+  #logform[open]>summary{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center;background:var(--panel);padding:18px 0 12px;font-size:1.125rem}
+  #logform[open]>summary::after{content:'\2715';font-size:1.1rem;padding:6px 10px}
+  html:has(#logform[open]),body:has(#logform[open]){overflow:hidden}
+  body:has(#logform[open])::after{content:'';position:fixed;inset:0;z-index:85;background:rgba(17,17,17,.45)}
+  #add{grid-template-columns:1fr 1fr;margin-top:0}
+  #add .btn{width:100%}
+  /* settings: list rows and a Save bar that stays in reach */
+  #settings .fold{border-bottom:1px solid #e6e6e6;padding-bottom:6px}
+  #settings>.row:last-child{position:sticky;bottom:0;z-index:2;flex-wrap:nowrap;background:var(--panel);margin:0 -2px;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #e6e6e6}
+  #settings>.row:last-child .btn{flex:1}
+  .fold>summary{font-size:1.1rem}
+}
 </style>
 </head>
 <body>
@@ -1282,7 +1370,7 @@ const say = (text, instant) => {
   if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) return set(text.length);
   let i = 0; set(0); typer = setInterval(() => { set(++i); if (i >= text.length) clearInterval(typer); }, 16);
 };
-const msg = (t) => { const m = $('#msg'); m.textContent = t; m.hidden = !t; };
+const msg = (t) => { const m = $('#msg'); m.textContent = t; m.hidden = !t; clearTimeout(msg.t); if (t && isMobile()) msg.t = setTimeout(() => { m.hidden = true; }, 4000); };   // phones: the message floats as a toast, so it clears itself
 const err = (t) => { const e = $('#err'); e.textContent = t; e.hidden = !t; };
 
 /* ---------- render ---------- */
@@ -1536,7 +1624,7 @@ $('#add').addEventListener('submit', (e) => {
   e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
   const w = normalize({ date: f.date, type: f.type, title: f.title, distance: toKm(+f.km || 0), time: parseDuration(f.mins), hr: f.hr, elev: f.elev });
   if (!w) return msg('Pick a valid date.');
-  const isNew = !ws.some((x) => x.id === w.id); ws = mergeWorkouts(ws, [w]).list; save(); e.target.reset(); $('#add [name=date]').value = todayStr(); renderDash(); msg('Workout logged.'); burst($('#add')); if (isNew) reconcile([w.id]);
+  const isNew = !ws.some((x) => x.id === w.id); ws = mergeWorkouts(ws, [w]).list; save(); e.target.reset(); $('#add [name=date]').value = todayStr(); renderDash(); msg('Workout logged.'); $('#logform').open = false; burst($('#add')); if (isNew) reconcile([w.id]);
 });
 
 /* ---------- log controls ---------- */
