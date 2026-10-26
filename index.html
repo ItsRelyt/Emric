@@ -135,7 +135,10 @@ details summary{font:600 1rem var(--disp);cursor:pointer}
   .field{padding:12px 14px;min-height:48px}
   .sm{font-size:.9375rem}.xs{font-size:.8125rem}
   #menu{display:inline-block}
+  /* the menu sheet is portalled to <body> (see moveMenuSheet) so no ancestor can trap or dim it;
+     its own class mirrors the open state, and the header keeps its height while the sheet is out */
   .tools{display:none;width:100%}.tools.open{display:flex}
+  body.menu-open header.row{min-height:52px}
   .tools .btn{flex:1 1 40%;text-align:center}
   .coachbox{gap:20px}
   .say{font-size:1.15rem;min-height:3rem;margin-bottom:16px}
@@ -469,7 +472,10 @@ img,svg,canvas{max-width:100%}
   #menu .ml{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .dcar{display:none}
   .tools{display:none}
-  .tools.open{display:grid;position:fixed;z-index:60;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));top:calc(max(16px,env(safe-area-inset-top)) + 58px);width:auto;gap:8px;padding:10px;background:var(--panel);border:1px solid #111;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+  /* menu sheet: portalled to <body> (moveMenuSheet) so no ancestor stacking context can trap it under the dim layer.
+     It sits just under the sticky app bar (bar is 52px + top padding), full width with side margins. */
+  .tools.open{display:grid;position:fixed;z-index:60;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));top:calc(env(safe-area-inset-top,0px) + 64px);width:auto;gap:8px;padding:10px;background:var(--panel);border:1px solid #111;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+  body.menu-open>.tools.open{left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));max-width:520px;margin-inline:auto}
   .tools .btn,.dmenu>summary{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;padding:0 18px;border-radius:14px;text-align:left;flex:none}
   .tools .btn::after,.dmenu>summary::after{content:'\203A';opacity:.55;font-size:1.4rem;line-height:1}
   .dmenu[open]>summary::after{content:'\2304'}
@@ -477,7 +483,9 @@ img,svg,canvas{max-width:100%}
   .dpop{padding:8px;margin-top:8px;border-radius:14px}
   .dpop .btn{justify-content:flex-start;text-align:left}
   .dpop .btn::after{display:none}
-  body:has(.tools.open)::before{content:'';position:fixed;inset:0;z-index:55;background:rgba(17,17,17,.4)}
+  /* dim layer behind the open menu: a real element (not ::before) so it can never sit above the sheet and eat its taps */
+  #menudim{display:none}
+  body.menu-open #menudim{display:block;position:fixed;inset:0;z-index:55;background:rgba(17,17,17,.4)}
   /* coach screen: today first, then the plan, then the housekeeping */
   #res>.two{display:contents}
   #res>#planmsg{order:0}#res #today{order:1}#res>#weekbox{order:2}#res #insights{order:3}#res>#watch{order:4}#res>#updates{order:5}
@@ -783,18 +791,19 @@ img,svg,canvas{max-width:100%}
 <main>
   <header class="row between">
     <div class="row" style="flex-wrap:nowrap;gap:12px"><h1 id="logo"></h1><button class="sdot" id="syncpill" type="button" data-s="off" aria-label="Not synced. Sign in to sync." title="Not synced. Sign in to sync."></button></div>
-    <button class="btn" id="menu" aria-expanded="false" aria-controls="tools" aria-label="Menu"><svg class="mi ham" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="mi cls" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="ml">Menu</span></button>
-    <div class="row tools" id="tools">
-      <button class="btn sky" id="authbtn">Sign in</button>
-      <details class="dmenu" id="dmenu"><summary class="btn mint">Data <span class="dcar" aria-hidden="true">▾</span></summary>
+    <button class="btn" id="menu" aria-expanded="false" aria-controls="tools" aria-haspopup="true" aria-label="Menu"><svg class="mi ham" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="mi cls" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="ml">Menu</span></button>
+    <!-- the sheet lives here while closed; on phones moveMenuSheet() portals it to <body> when it opens -->
+    <div class="row tools" id="tools" role="menu" aria-label="Menu">
+      <button class="btn sky" id="authbtn" role="menuitem">Sign in</button>
+      <details class="dmenu" id="dmenu"><summary class="btn mint" role="button" aria-haspopup="true">Data <span class="dcar" aria-hidden="true">▾</span></summary>
         <div class="dpop">
-          <label class="btn sky">Import CSV / JSON<input id="file" class="sr" type="file" accept=".csv,.json,text/csv,application/json"></label>
-          <button class="btn sky" id="stravabtn">Import from Strava, Garmin or Polar</button>
-          <button class="btn mint" id="xcsv">Export CSV</button>
-          <button class="btn mint" id="xjson">Export JSON</button>
+          <label class="btn sky" role="menuitem">Import CSV / JSON<input id="file" class="sr" type="file" accept=".csv,.json,text/csv,application/json"></label>
+          <button class="btn sky" id="stravabtn" role="menuitem">Import from Strava, Garmin or Polar</button>
+          <button class="btn mint" id="xcsv" role="menuitem">Export CSV</button>
+          <button class="btn mint" id="xjson" role="menuitem">Export JSON</button>
         </div>
       </details>
-      <button class="btn" id="gear" aria-expanded="false" aria-controls="settings">Settings</button>
+      <button class="btn" id="gear" aria-expanded="false" aria-controls="settings" role="menuitem">Settings</button>
     </div>
   </header>
 
