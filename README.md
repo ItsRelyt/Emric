@@ -36,6 +36,16 @@ itsrelyt.github.io/Emric/
 
 ## Recent changes
 
+- **Progressive plan generator** — long plans no longer plateau at a flat weekly mileage. Volume now
+  grows about 4–8% per build week (smaller step for longer blocks so improvement keeps coming across
+  the whole plan instead of hitting its cap after a month), with cutback weeks every fourth week, a
+  peak that scales to the length of the training block rather than distance caps alone, gradual long-run
+  growth toward a distance-specific limit, then sharpen (goal-pace work) and taper phases ending on the
+  goal day itself.
+- **Mobile menu fix** — tapping the hamburger (three-lines) button on phones no longer dims the screen
+  or leaves the three menu options unresponsive. The menu sheet is portalled to `<body>` when opened,
+  with a dedicated fixed-position dim overlay sitting behind it, so ancestor stacking contexts can't
+  trap the menu or intercept its taps.
 - Removed the pace graph from the progress view. The average-pace summary text and everything else
   are unchanged.
 
