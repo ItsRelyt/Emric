@@ -10,10 +10,32 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Emric: AI running coach</title>
-<script>/* Emric ships as a store app, not a PWA: once, remove any service worker and caches an earlier web version left behind. No reload. */
-(function(){try{if(localStorage.getItem('emric.swclean')==='1')return;localStorage.setItem('emric.swclean','1');
-if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
-if(window.caches&&caches.keys)caches.keys().then(function(ns){ns.forEach(function(n){caches.delete(n)})}).catch(function(){})}catch(e){}})();</script>
+<script>/* Service worker + push notifications (see sw.js): today's two reminder slots (morning and evening) are handed
+to the worker whenever the app is open, and cleared the moment a run for the day is in the log. The worker keeps them
+armed as scheduled notifications, so they keep arriving twice a day until the run gets logged. Native Android builds are
+skipped: they already have their own local reminders and no service worker there. Nothing else about the app changes. */
+(function(){
+var nav=navigator;
+if(!nav||!('serviceWorker'in nav)||typeof Notification==='undefined'||!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;
+var SLOTS=['08:00','18:30'];
+function at(hhmm){var d=new Date(),hm=hhmm.split(':').map(Number);return new Date(d.getFullYear(),d.getMonth(),d.getDate(),hm[0],hm[1],0,0).getTime()}
+function readDay(){try{var s=JSON.parse(localStorage.getItem('emric.v2')||'null'),ws=(s&&(s.workouts||[]))||[],c=s&&s.coach&&s.coach.data;
+var today=new Date().toLocaleDateString('en-CA'),done=ws.some(function(w){return w&&w.date===today&&((+w.sec>0)||(+w.km>0))});
+var it=c&&Array.isArray(c.week)?c.week.filter(function(x){return x&&x.date===today}):[];
+return{day:today,done:done,title:it.length?String((it[0].detail&&it[0].detail.title)||it[0].plan||it[0].kind||'').replace(/\s+/g,' ').trim().slice(0,60):''}}catch(e){return{day:'',done:false,title:''}}}
+function post(m){try{nav.serviceWorker.ready.then(function(r){r.active&&r.active.postMessage(m)}).catch(function(){})}catch(e){}}
+function askPermission(){try{if(Notification.permission==='default')Notification.requestPermission().catch(function(){});}catch(e){}}
+function sync(){try{var p=readDay();if(!p.day)return;
+if(p.done){post({t:'clear',day:p.day});return}
+var body=(p.title?('Plan: '+p.title+'. '):'')+'Log it in Emric so your coach can keep your plan on track.';
+post({t:'set',slots:SLOTS.map(function(hhmm,i){return{id:'emric-run-'+i,at:at(hhmm),day:p.day,title:"Today's run is still waiting",body:body}})})}catch(e){}}
+function markRun(){try{var p=readDay();if(p.day&&p.done)post({t:'ran',day:p.day})}catch(e){}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){askPermission();sync()}else{markRun()}});
+addEventListener('focus',sync);addEventListener('pagehide',markRun);
+if(nav.serviceWorker&&nav.serviceWorker.controller)nav.serviceWorker.addEventListener('message',function(e){var d=e.data||{};
+if(d.t==='ask'){var p=readDay();post({t:'answer',day:d.day,done:p.done})}else if(d.t==='ping'){sync()}});
+nav.serviceWorker.getRegistration().then(function(r){return r&&r.active?r:nav.serviceWorker.register('sw.js',{scope:'./'})}).then(function(){askPermission();sync();setInterval(sync,6e4)}).catch(function(){});
+})();</script>
 <script>
 /* device detection: tags <html> with d-phone|d-tablet|d-desktop, touch|mouse, ios|android, portrait|landscape, standalone, kb, lite */
 (function(){var d=document.documentElement,n=navigator,ua=n.userAgent||'',mm=function(q){return matchMedia(q).matches};
