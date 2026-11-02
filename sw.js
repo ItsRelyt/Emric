@@ -1,198 +1,55 @@
-/* Emric service worker: run reminders that keep arriving twice a day until the athlete logs today's run.
- * The page (see the matching block at the top of index.html) posts 'set' with two slots for today while the app is open,
- * and 'clear' the moment a workout for the day exists in the log. Each slot becomes a scheduled local notification
- * (showNotification with a past/future `timestamp`), so it fires even when the app is closed. On every wake-up the
- * worker re-checks the last state it heard from the page and asks any open client, so reminders stop as soon as the run
- * is logged and keep coming on days it is not. No fetch handler: nothing about how the app loads or caches has changed. */
+/* Emric service worker: receives Web Push messages and shows them, so run reminders arrive even when the app is closed.
+ *
+ * Browsers cannot schedule a notification for a later time from the page or the worker, so the timing lives on the
+ * server (supabase/functions/push-reminders, run every 10 minutes). The server checks the athlete's synced log, and only
+ * sends a reminder while today's run is still missing. The worker's job is simply: show what arrives, and open the app
+ * when it is tapped. There is no fetch handler: nothing about how the app loads or caches is touched. */
 'use strict';
 
-const TAG = 'emric-run-reminder';
-const PLAN_KEY = 'runplan', DONE_KEY = 'rundone', SENT_KEY = 'sentslot', TIME_KEY = 'rumtime';
-const IDS = ['emric-run-0', 'emric-run-1'];
-
-// Workers have no localStorage, so today's plan and the last "did you run?" answer live in IndexedDB.
-function kvOpen() {
-  return new Promise((res) => {
-    let req = null;
-    try { req = indexedDB.open('emric-sw', 1); } catch (e) { return res(null); }
-    req.onupgradeneeded = () => { try { req.result.createObjectStore('kv'); } catch (e) {} };
-    req.onerror = req.onblocked = () => res(null);
-    req.onsuccess = () => res(req.result);
-  });
-}
-function kv(name, value) {   // no value: read; with value: write
-  return kvOpen().then((db) => {
-    if (!db) return null;
-    return new Promise((res) => {
-      let out = null;
-      try {
-        const tx = db.transaction('kv', value === undefined ? 'readonly' : 'readwrite');
-        const st = tx.objectStore('kv');
-        if (value === undefined) { const rq = st.get(name); rq.onsuccess = () => { out = rq.result === undefined ? null : rq.result; }; rq.onerror = () => { out = null; }; }
-        else st.put(value, name);
-        tx.oncomplete = () => { try { db.close(); } catch (e) {} res(out); };
-        tx.onerror = tx.onabort = () => { try { db.close(); } catch (e) {} res(out); };
-      } catch (e) { try { db.close(); } catch (e2) {} res(null); }
-    });
-  });
-}
-
-const localDay = (t) => new Date(t || Date.now()).toLocaleDateString('en-CA');
-const notifOpts = (s) => ({
-  body: s.body, tag: TAG, id: s.id, icon: 'icon-192.png', badge: 'icon-192.png',
-  timestamp: s.at, data: { url: './', day: s.day, slot: s.id }
-});
+const DEFAULT_TAG = 'emric-run-reminder';
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
-
-function closeAll() {
-  return self.registration.getNotifications({ tag: TAG })
-    .then((ns) => { ns.forEach((n) => { try { n.close(); } catch (e) {} }); })
-    .catch(() => {});
-}
-function clearPlan() {   // stops today's nagging; the reminder times stay remembered for later days
-  return closeAll()
-    .then(() => Promise.all(IDS.map((id) => self.registration.cancel(id).catch(() => {}))))
-    .then(() => kv(PLAN_KEY, null))
-    .then(() => kv(SENT_KEY, null));
-}
-
-// Arm one slot. A future slot becomes a scheduled notification that fires even with the app closed; a slot whose time
-// has passed notifies straight away, but only once per day (the delivered marker lives in IndexedDB). Scheduled
-// notifications expire after a few days on some platforms, so any slot more than ~2 days out is skipped: checkSlots()
-// re-arms it when it gets close.
-async function armSlot(s) {
-  const now = Date.now();
-  if (s.at > now) {
-    if (s.at - now < 1728e5) await self.registration.showNotification(s.title, notifOpts(s)).catch(() => {});
-    return false;
-  }
-  const sent = (await kv(SENT_KEY)) || {};
-  if (sent[s.id] === s.day) return true;                          // this reminder already went out on that day
-  const o = notifOpts(s);
-  delete o.timestamp;
-  await self.registration.showNotification(s.title, o).catch(() => {});
-  sent[s.id] = s.day;
-  await kv(SENT_KEY, sent);
-  return true;
-}
-
-self.addEventListener('message', (e) => {
-  const d = (e && e.data) || {};
-  if (d.t === 'set' && Array.isArray(d.slots) && d.slots.length) {
-    e.waitUntil((async () => {
-      const day = d.slots[0].day || localDay(d.slots[0].at);
-      await kv(DONE_KEY, { day, done: false });                 // the page says: no run yet today
-      const old = await kv(PLAN_KEY);
-      const sameDay = !!(old && old.day === day);              // re-sync of the same day must not reset the once-per-day markers
-      if (old && old.day && old.day !== day) await closeAll();   // yesterday's notifications should not linger
-      await kv(PLAN_KEY, { day, slots: d.slots });
-      await saveTimes(d.slots);                                  // remembered for days when the app stays shut
-      if (!sameDay) await kv(SENT_KEY, {});                      // a new day from the page: its slots may notify again
-      if (await loggedToday(day)) { await clearPlan(); return; }
-      for (const s of d.slots) await armSlot(s);
-      try { if (self.registration.periodicSync) await self.registration.periodicSync.register('emric-run', { minInterval: 3600e3 }); } catch (err) {}
-    })());
-  } else if (d.t === 'ran') {                                      // the page says: this day is trained
-    e.waitUntil((async () => {
-      const day = d.day || localDay();
-      await kv(DONE_KEY, { day, done: true });
-      await clearPlan();
-    })());
-  } else if (d.t === 'clear') {
-    e.waitUntil((async () => {                                  // a run for the day exists: stop the nagging
-      const day = d.day || localDay();
-      await kv(DONE_KEY, { day, done: true });
-      await clearPlan();
-    })());
-  }
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    await self.clients.claim();
+    try { indexedDB.deleteDatabase('emric-sw'); } catch (err) {}   // left behind by the earlier, timer-based version of this worker
+  })());
 });
 
-// Did the athlete run on `day`? The page reports it while it is open ('ran'), and any open client answers a probe.
-// A 'true' answer is trusted only for the day it was given; a stale 'false' must never silence later days —
-// with no fresh evidence the worker asks any open client, and failing that the reminders keep coming (that is the point).
-async function loggedToday(day) {
-  const done = await kv(DONE_KEY);
-  if (done && done.day === day && done.done === true) return true;
-  const ans = await askClients(day);
-  if (ans !== null) return ans === 'done';
-  return false;
-}
-function askClients(day) {
-  return new Promise((res) => {
-    let settled = false, timer = 0;
-    const finish = (v) => { if (!settled) { settled = true; clearTimeout(timer); navigator.serviceWorker.removeEventListener('message', onMsg); res(v); } };
-    const onMsg = (e) => { const d = (e && e.data) || {}; if (d.t === 'answer') finish(d.done ? 'done' : 'pending'); };
-    navigator.serviceWorker.addEventListener('message', onMsg);
-    self.clients.matchAll({ includeUncontrolled: true }).then((cs) => {
-      if (!cs.length) return finish(null);
-      cs.forEach((c) => { try { c.postMessage({ t: 'ask', day }); } catch (e) {} });
-      timer = setTimeout(() => finish(null), 1500);
-    }).catch(() => finish(null));
-  });
-}
+// Every push MUST end in a visible notification (browsers, and iOS in particular, penalise silent pushes).
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; }
+  catch (err) { try { d = { body: e.data.text() }; } catch (err2) {} }
+  const title = String(d.title || 'Emric');
+  e.waitUntil(self.registration.showNotification(title, {
+    body: String(d.body || 'Open Emric to see today\u2019s session.'),
+    tag: String(d.tag || DEFAULT_TAG),
+    renotify: true,
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    data: { url: String(d.url || './') }
+  }));
+});
 
-// Helpers for the fixed reminder times: keep the clock time of a slot and move it onto another calendar day.
-function clockHM(at) {
-  const d = new Date(at);
-  return [d.getHours(), d.getMinutes()];
-}
-function atLocal(day, hm) {
-  const p = day.split('-').map(Number);
-  return new Date(p[0], p[1] - 1, p[2], hm[0], hm[1], 0, 0).getTime();
-}
-// Remember the two reminder clock times (with their texts) so days when the app stays shut can still be nagged.
-async function saveTimes(slots) {
-  await kv(TIME_KEY, slots.map((s) => ({ id: s.id, hm: clockHM(s.at), title: s.title, body: s.body })));
-}
-// Rebuild that day's slots from the remembered clock times.
-function slotsForDay(times, day) {
-  return times.map((t, i) => ({ id: t.id || IDS[i], at: atLocal(day, t.hm), day, title: t.title, body: t.body }));
-}
+// The browser can rotate or expire a subscription. Try to renew it, then tell any open page so it re-saves it.
+self.addEventListener('pushsubscriptionchange', (e) => {
+  e.waitUntil((async () => {
+    try {
+      const old = e.oldSubscription;
+      if (old && old.options) await self.registration.pushManager.subscribe(old.options);
+    } catch (err) {}
+    const cs = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    cs.forEach((c) => { try { c.postMessage({ t: 'resubscribed' }); } catch (err) {} });
+  })());
+});
 
-// Safety net for throttled or missed alarms: whenever the worker wakes, bring the reminders up to date. The two times
-// are fixed (08:00 and 18:30), so a wake-up delivers anything that came due while it slept and keeps the next alarm
-// armed. Once both of an untrained day's reminders have gone out, tomorrow's pair is armed too — the twice-a-day
-// nagging carries on by itself until the page reports the run (or the app is opened again).
-async function checkSlots() {
-  const times = await kv(TIME_KEY);
-  if (!Array.isArray(times) || !times.length) return;            // the app has never told us about a plan yet
-  let plan = await kv(PLAN_KEY);
-  if (!plan || !Array.isArray(plan.slots)) plan = { day: localDay(), slots: slotsForDay(times, localDay()) };
-  const today = localDay(), now = Date.now();
-  if (plan.day !== today && await loggedToday(plan.day)) { await kv(PLAN_KEY, null); plan = { day: today, slots: slotsForDay(times, today) }; }
-  else if (plan.day !== today) plan = { day: today, slots: rollToDay(plan.slots, today) };   // catch up to today
-  // The page reports "not run yet" when it hands over a plan; only trust that flag for the day it was written.
-  // If a later day has come and gone with no word at all, the nagging must keep rolling forward.
-  const done = await kv(DONE_KEY);
-  if (!done || !done.day || done.day < today) await kv(DONE_KEY, { day: today, done: false });
-  // If the app has been silent for two full days, stop nagging (the athlete may have quit): stay dormant until the
-  // page comes back and posts a fresh plan. Any 'ran'/'clear' message also leaves PLAN_KEY null, i.e. dormant.
-  if (plan.day < localDay(now - 1728e5)) return;
-  if (await loggedToday(today)) return clearPlan();
-  for (const s of plan.slots) await armSlot(s);                                   // deliver what is due, keep the rest armed
-  if (plan.slots.every((s) => s.at <= now)) {                                     // both of today's reminders are done
-    const tmr = localDay(now + 86400e3);
-    plan = { day: tmr, slots: slotsForDay(times, tmr) };
-    await kv(SENT_KEY, {});                                                       // the new day's reminders may go out
-    await kv(DONE_KEY, { day: tmr, done: false });                                 // nothing logged yet on the new day
-    for (const s of plan.slots) await armSlot(s);
-  }
-  await kv(PLAN_KEY, plan);
-}
-function rollToDay(slots, day) {   // same clock times, moved onto another calendar day
-  return slots.map((s, i) => ({ id: IDS[i] || ('emric-run-' + i), at: atLocal(day, clockHM(s.at)), day, title: s.title, body: s.body }));
-}
-self.addEventListener('periodicsync', (e) => { if (e.tag === 'emric-run') e.waitUntil(checkSlots()); });
-self.addEventListener('sync', (e) => { if (e.tag === 'emric-run') e.waitUntil(checkSlots()); });
-
-// A reminder that went off stays in the tray until acted on; clicking opens the app to log the run.
+// Tapping a reminder focuses the app if it is open, otherwise opens it.
 self.addEventListener('notificationclick', (e) => {
   const n = e.notification;
   try { n.close(); } catch (err) {}
   e.waitUntil((async () => {
-    const url = (n.data && n.data.url) || './';
+    const url = new URL((n.data && n.data.url) || './', self.registration.scope).href;
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of cs) { try { await c.focus(); return; } catch (err) {} }
     try { await self.clients.openWindow(url); } catch (err) {}
