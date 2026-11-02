@@ -25,11 +25,13 @@ var it=c&&Array.isArray(c.week)?c.week.filter(function(x){return x&&x.date===tod
 return{day:today,done:done,title:it.length?String((it[0].detail&&it[0].detail.title)||it[0].plan||it[0].kind||'').replace(/\s+/g,' ').trim().slice(0,60):''}}catch(e){return{day:'',done:false,title:''}}}
 function post(m){try{nav.serviceWorker.ready.then(function(r){r.active&&r.active.postMessage(m)}).catch(function(){})}catch(e){}}
 function askPermission(){try{if(Notification.permission==='default')Notification.requestPermission().catch(function(){});}catch(e){}}
+var lastSig='';
 function sync(){try{var p=readDay();if(!p.day)return;
-if(p.done){post({t:'clear',day:p.day});return}
+if(p.done){lastSig='done:'+p.day;post({t:'clear',day:p.day});return}
+var sig=p.day+'|'+(p.title||'');if(sig===lastSig)return;lastSig=sig;   // same day and plan: nothing new to hand over (avoids re-arming every minute)
 var body=(p.title?('Plan: '+p.title+'. '):'')+'Log it in Emric so your coach can keep your plan on track.';
 post({t:'set',slots:SLOTS.map(function(hhmm,i){return{id:'emric-run-'+i,at:at(hhmm),day:p.day,title:"Today's run is still waiting",body:body}})})}catch(e){}}
-function markRun(){try{var p=readDay();if(p.day&&p.done)post({t:'ran',day:p.day})}catch(e){}}
+function markRun(){try{var p=readDay();if(p.day&&p.done&&lastSig!=='done:'+p.day){lastSig='done:'+p.day;post({t:'ran',day:p.day})}}catch(e){}}
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){askPermission();sync()}else{markRun()}});
 addEventListener('focus',sync);addEventListener('pagehide',markRun);
 if(nav.serviceWorker&&nav.serviceWorker.controller)nav.serviceWorker.addEventListener('message',function(e){var d=e.data||{};
