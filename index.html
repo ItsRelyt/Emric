@@ -3259,7 +3259,8 @@ function maybeRefresh() {
 }
 function dailyTick() { if (busy) return; restoreCoach(); maybeRefresh(); maybeAdaptMissed(); }
 function scheduleMidnight() { const ms = new Date().setHours(24, 0, 5, 0) - Date.now(); setTimeout(() => { dailyTick(); renderDash(); scheduleMidnight(); }, Math.max(ms, 60000)); }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') dailyTick(); });
+// Coming back to the app must not re-plan: only roll the existing plan forward on the new day. The AI daily refresh runs on the midnight timer, not on return.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !busy) restoreCoach(); });
 
 /* ---------- coach chat ---------- */
 const CHAT_CAP = 120;   // messages kept locally and sent to the model as conversation context
