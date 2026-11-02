@@ -59,9 +59,15 @@ function clearPlan() {   // stops today's nagging; the reminder times stay remem
 }
 
 // Arm one slot. A future slot becomes a scheduled notification that fires even with the app closed; a slot whose time
-// has passed notifies straight away, but only once per day (the delivered marker lives in IndexedDB).
+// has passed notifies straight away, but only once per day (the delivered marker lives in IndexedDB). Scheduled
+// notifications expire after a few days on some platforms, so any slot more than ~2 days out is skipped: checkSlots()
+// re-arms it when it gets close.
 async function armSlot(s) {
-  if (s.at > Date.now()) { await self.registration.showNotification(s.title, notifOpts(s)).catch(() => {}); return false; }
+  const now = Date.now();
+  if (s.at > now) {
+    if (s.at - now < 1728e5) await self.registration.showNotification(s.title, notifOpts(s)).catch(() => {});
+    return false;
+  }
   const sent = (await kv(SENT_KEY)) || {};
   if (sent[s.id] === s.day) return true;                          // this reminder already went out on that day
   const o = notifOpts(s);
@@ -79,10 +85,11 @@ self.addEventListener('message', (e) => {
       const day = d.slots[0].day || localDay(d.slots[0].at);
       await kv(DONE_KEY, { day, done: false });                 // the page says: no run yet today
       const old = await kv(PLAN_KEY);
+      const sameDay = !!(old && old.day === day);              // re-sync of the same day must not reset the once-per-day markers
       if (old && old.day && old.day !== day) await closeAll();   // yesterday's notifications should not linger
       await kv(PLAN_KEY, { day, slots: d.slots });
       await saveTimes(d.slots);                                  // remembered for days when the app stays shut
-      await kv(SENT_KEY, {});                                    // fresh word from the page: today's slots may notify again
+      if (!sameDay) await kv(SENT_KEY, {});                      // a new day from the page: its slots may notify again
       if (await loggedToday(day)) { await clearPlan(); return; }
       for (const s of d.slots) await armSlot(s);
       try { if (self.registration.periodicSync) await self.registration.periodicSync.register('emric-run', { minInterval: 3600e3 }); } catch (err) {}
@@ -92,24 +99,25 @@ self.addEventListener('message', (e) => {
       const day = d.day || localDay();
       await kv(DONE_KEY, { day, done: true });
       await clearPlan();
-      try { if (self.registration.periodicSync) await self.registration.periodicSync.unregister('emric-run'); } catch (err) {}
     })());
   } else if (d.t === 'clear') {
     e.waitUntil((async () => {                                  // a run for the day exists: stop the nagging
       const day = d.day || localDay();
       await kv(DONE_KEY, { day, done: true });
       await clearPlan();
-      try { if (self.registration.periodicSync) await self.registration.periodicSync.unregister('emric-run'); } catch (err) {}
     })());
   }
 });
 
 // Did the athlete run on `day`? The page reports it while it is open ('ran'), and any open client answers a probe.
-// With no evidence either way the reminders keep coming — that is the point of nagging twice a day until the run.
+// A 'true' answer is trusted only for the day it was given; a stale 'false' must never silence later days —
+// with no fresh evidence the worker asks any open client, and failing that the reminders keep coming (that is the point).
 async function loggedToday(day) {
   const done = await kv(DONE_KEY);
-  if (done && done.day === day && typeof done.done === 'boolean') return done.done;
-  return await askClients(day) === 'done';
+  if (done && done.day === day && done.done === true) return true;
+  const ans = await askClients(day);
+  if (ans !== null) return ans === 'done';
+  return false;
 }
 function askClients(day) {
   return new Promise((res) => {
@@ -134,6 +142,14 @@ function atLocal(day, hm) {
   const p = day.split('-').map(Number);
   return new Date(p[0], p[1] - 1, p[2], hm[0], hm[1], 0, 0).getTime();
 }
+// Remember the two reminder clock times (with their texts) so days when the app stays shut can still be nagged.
+async function saveTimes(slots) {
+  await kv(TIME_KEY, slots.map((s) => ({ id: s.id, hm: clockHM(s.at), title: s.title, body: s.body })));
+}
+// Rebuild that day's slots from the remembered clock times.
+function slotsForDay(times, day) {
+  return times.map((t, i) => ({ id: t.id || IDS[i], at: atLocal(day, t.hm), day, title: t.title, body: t.body }));
+}
 
 // Safety net for throttled or missed alarms: whenever the worker wakes, bring the reminders up to date. The two times
 // are fixed (08:00 and 18:30), so a wake-up delivers anything that came due while it slept and keeps the next alarm
@@ -147,6 +163,13 @@ async function checkSlots() {
   const today = localDay(), now = Date.now();
   if (plan.day !== today && await loggedToday(plan.day)) { await kv(PLAN_KEY, null); plan = { day: today, slots: slotsForDay(times, today) }; }
   else if (plan.day !== today) plan = { day: today, slots: rollToDay(plan.slots, today) };   // catch up to today
+  // The page reports "not run yet" when it hands over a plan; only trust that flag for the day it was written.
+  // If a later day has come and gone with no word at all, the nagging must keep rolling forward.
+  const done = await kv(DONE_KEY);
+  if (!done || !done.day || done.day < today) await kv(DONE_KEY, { day: today, done: false });
+  // If the app has been silent for two full days, stop nagging (the athlete may have quit): stay dormant until the
+  // page comes back and posts a fresh plan. Any 'ran'/'clear' message also leaves PLAN_KEY null, i.e. dormant.
+  if (plan.day < localDay(now - 1728e5)) return;
   if (await loggedToday(today)) return clearPlan();
   for (const s of plan.slots) await armSlot(s);                                   // deliver what is due, keep the rest armed
   if (plan.slots.every((s) => s.at <= now)) {                                     // both of today's reminders are done
