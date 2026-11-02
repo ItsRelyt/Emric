@@ -10,33 +10,13 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Emric: AI running coach</title>
-<script>/* Service worker + push notifications (see sw.js): today's two reminder slots (morning and evening) are handed
-to the worker whenever the app is open, and cleared the moment a run for the day is in the log. The worker keeps them
-armed as scheduled notifications, so they keep arriving twice a day until the run gets logged. Native Android builds are
-skipped: they already have their own local reminders and no service worker there. Nothing else about the app changes. */
-(function(){
-var nav=navigator;
-if(!nav||!('serviceWorker'in nav)||typeof Notification==='undefined'||!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;
-var SLOTS=['08:00','18:30'];
-function at(hhmm){var d=new Date(),hm=hhmm.split(':').map(Number);return new Date(d.getFullYear(),d.getMonth(),d.getDate(),hm[0],hm[1],0,0).getTime()}
-function readDay(){try{var s=JSON.parse(localStorage.getItem('emric.v2')||'null'),ws=(s&&(s.workouts||[]))||[],c=s&&s.coach&&s.coach.data;
-var today=new Date().toLocaleDateString('en-CA'),done=ws.some(function(w){return w&&w.date===today&&((+w.sec>0)||(+w.km>0))});
-var it=c&&Array.isArray(c.week)?c.week.filter(function(x){return x&&x.date===today}):[];
-return{day:today,done:done,title:it.length?String((it[0].detail&&it[0].detail.title)||it[0].plan||it[0].kind||'').replace(/\s+/g,' ').trim().slice(0,60):''}}catch(e){return{day:'',done:false,title:''}}}
-function post(m){try{nav.serviceWorker.ready.then(function(r){r.active&&r.active.postMessage(m)}).catch(function(){})}catch(e){}}
-function askPermission(){try{if(Notification.permission==='default')Notification.requestPermission().catch(function(){});}catch(e){}}
-var lastSig='';
-function sync(){try{var p=readDay();if(!p.day)return;
-if(p.done){lastSig='done:'+p.day;post({t:'clear',day:p.day});return}
-var sig=p.day+'|'+(p.title||'');if(sig===lastSig)return;lastSig=sig;   // same day and plan: nothing new to hand over (avoids re-arming every minute)
-var body=(p.title?('Plan: '+p.title+'. '):'')+'Log it in Emric so your coach can keep your plan on track.';
-post({t:'set',slots:SLOTS.map(function(hhmm,i){return{id:'emric-run-'+i,at:at(hhmm),day:p.day,title:"Today's run is still waiting",body:body}})})}catch(e){}}
-function markRun(){try{var p=readDay();if(p.day&&p.done&&lastSig!=='done:'+p.day){lastSig='done:'+p.day;post({t:'ran',day:p.day})}}catch(e){}}
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){askPermission();sync()}else{markRun()}});
-addEventListener('focus',sync);addEventListener('pagehide',markRun);
-if(nav.serviceWorker&&nav.serviceWorker.controller)nav.serviceWorker.addEventListener('message',function(e){var d=e.data||{};
-if(d.t==='ask'){var p=readDay();post({t:'answer',day:d.day,done:p.done})}else if(d.t==='ping'){sync()}});
-nav.serviceWorker.getRegistration().then(function(r){return r&&r.active?r:nav.serviceWorker.register('sw.js',{scope:'./'})}).then(function(){askPermission();sync();setInterval(sync,6e4)}).catch(function(){});
+<script>/* Registers the service worker (sw.js), which receives Web Push reminders from the server and shows them, so they
+arrive even when the app is closed. Turning reminders on (Settings > Reminders & widget) subscribes this device. Native Android
+builds are skipped: they have their own local reminders. */
+(function(){var n=navigator;
+if(!n||!('serviceWorker'in n)||!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;
+function reg(){n.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){})}
+if(document.readyState==='complete')reg();else addEventListener('load',reg);
 })();</script>
 <script>
 /* device detection: tags <html> with d-phone|d-tablet|d-desktop, touch|mouse, ios|android, portrait|landscape, standalone, kb, lite */
@@ -311,6 +291,11 @@ html.d-tablet main{max-width:960px}
 html.d-tablet .tabs{top:var(--sa-top)}
 /* gate overlay: Emric requires an account before the app can be used */
 #gate{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.9);overflow-y:auto}
+#tour{position:fixed;inset:0;z-index:160;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:rgba(250,250,250,.94);overflow-y:auto}
+#tour .gatebox{margin:auto;width:min(560px,100%)}
+#tournav{position:sticky;bottom:-16px;background:var(--panel);padding:10px 0 calc(26px + var(--sa-bottom));border-top:1px solid #e6e6e6;margin-top:4px}
+#tour ol{margin:.2em 0;padding-left:1.25em} #tour li{margin:.4em 0} #tour details{border:1px solid #d9d9d9;border-radius:10px;padding:8px 12px;margin:6px 0} #tour summary{cursor:pointer;font-weight:700;padding:4px 0}
+#tourdots{display:flex;gap:6px} #tourdots i{width:9px;height:9px;border-radius:50%;background:#d0d0d0;display:block} #tourdots i.on{background:var(--ink)}
 #legalmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.92);overflow-y:auto}
 #editmodal,#confirmmodal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(250,250,250,.92);overflow-y:auto}
 .gatebox{width:min(430px,100%);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
@@ -660,6 +645,7 @@ img,svg,canvas{max-width:100%}
         <input id="gterms" type="checkbox" style="margin-top:4px;width:18px;height:18px;flex:none" aria-describedby="gtermslink">
         <span class="sm">I have read and agree to the <button class="chip" id="gtermslink" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button>.</span>
       </label>
+      <p id="gtourhint" class="mute xs" style="margin:0" hidden>After you create your account, a short step-by-step guide shows you how to confirm it, set your goal, import your runs from Strava, Garmin, Polar or other apps, and turn on reminders.</p>
       <div class="row">
         <button class="btn mint" id="gsubmit">Sign in</button>
         <button class="btn sky" id="gtoggle">Create account instead</button>
@@ -669,6 +655,15 @@ img,svg,canvas{max-width:100%}
       <p id="gerr" class="c-berry sm" role="alert" hidden></p>
       <p id="gok" class="c-mint sm" role="status" hidden></p>
     </div>
+  </div>
+</div>
+<div id="tour" role="dialog" aria-modal="true" aria-labelledby="tourtitle" hidden>
+  <div class="px stack gatebox">
+    <div class="row between"><span id="tourdots" aria-hidden="true"></span><button class="chip" id="tourskip" type="button">Skip guide</button></div>
+    <span class="mute xs" id="tourstep" aria-live="polite"></span>
+    <h2 id="tourtitle" style="margin:0"></h2>
+    <div id="tourbody" class="stack sm"></div>
+    <div class="row between" id="tournav"><button class="btn" id="tourback" type="button">Back</button><button class="btn mint" id="tournext" type="button">Next</button></div>
   </div>
 </div>
 <div id="legalmodal" role="dialog" aria-modal="true" aria-labelledby="legaltitle" hidden>
@@ -928,10 +923,10 @@ img,svg,canvas{max-width:100%}
     </div></details>
 
     <details class="fold sec" id="remsec"><summary>Reminders &amp; widget</summary><div class="stack">
-      <p id="remnote" class="sm c-berry" style="margin:0" hidden>Reminders and the home-screen widget are part of the Emric Android app. They are switched off in the browser.</p>
+      <p id="remnote" class="sm c-berry" style="margin:0" role="status" hidden></p>
       <label class="row" style="flex-wrap:nowrap;gap:10px;align-items:flex-start">
         <input id="remon" type="checkbox" style="margin-top:4px;width:20px;height:20px;flex:none">
-        <span class="sm"><b>Remind me on training days</b><br><span class="mute xs">A notification with today's session, at the time you choose. It follows your plan and stays quiet once you have logged the workout.</span></span>
+        <span class="sm"><b>Remind me on training days</b><br><span class="mute xs">A notification with today's session, at the time you choose. It follows your plan and stays quiet once you have logged the workout. It arrives even when Emric is closed.</span></span>
       </label>
       <div id="remopts" class="stack" hidden>
         <label class="stack sm">Remind me at<input id="remtime" class="field" type="time" value="08:00" style="max-width:10rem"></label>
@@ -961,6 +956,7 @@ img,svg,canvas{max-width:100%}
       <div class="row" style="flex-wrap:wrap;gap:8px">
         <button class="chip" id="setlegalbtn" type="button" aria-haspopup="dialog">Terms of Service &amp; Privacy Policy</button>
         <button class="chip" id="setcookiebtn" type="button">Cookie preferences</button>
+        <button class="chip" id="settourbtn" type="button">Setup guide</button>
       </div>
       <div class="row" id="delacctrow" hidden><button class="btn" id="delacct" type="button" style="background:#fff;color:#b4412f;border-color:#b4412f">Delete my account…</button></div>
       <p class="xs mute" id="delacctnote" style="margin:0" hidden>Permanently erases your account and everything synced to it. This cannot be undone.</p>
@@ -975,7 +971,7 @@ img,svg,canvas{max-width:100%}
   <section id="stravapanel" class="px stack" hidden>
     <div class="row between">
       <h2>Import activities</h2>
-      <button class="chip" id="stravaclose" aria-label="Close the import panel">✕</button>
+      <span class="row" style="gap:8px"><button class="chip" id="stravahelp" type="button">How do I get my files?</button><button class="chip" id="stravaclose" aria-label="Close the import panel">✕</button></span>
     </div>
     <div class="stack">
       <div class="row between">
@@ -3727,6 +3723,7 @@ async function initAuth() {
     const { data: { session } } = await client.auth.getSession();
     currentUser = session?.user || null; sessionToken = session?.access_token || '';
     updateAuthUI();
+    if (currentUser) setTimeout(maybeTour, 1500);   // a new account opened on a second device still gets the guide once
 
     client.auth.onAuthStateChange((event, session) => {
       const prevId = currentUser?.id;
@@ -3735,7 +3732,7 @@ async function initAuth() {
       updateAuthUI();
       if (event === 'SIGNED_OUT') { cachedGroqKey = ''; stopRealtime(); return; }
       // Defer: calling Supabase from inside this callback can deadlock the auth lock.
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentUser?.id !== prevId) setTimeout(() => { getGroqKey(true).then(() => { syncNow(); maybeRefresh(); }); }, 0);
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentUser?.id !== prevId) setTimeout(() => { getGroqKey(true).then(() => { syncNow(); maybeRefresh(); }); setTimeout(maybeTour, 800); }, 0);   // e.g. back from the confirmation email
     });
   } catch (e) {
     console.error('Auth initialization error:', e);
@@ -3753,7 +3750,7 @@ const authMsg = (e) => {
   return m || 'Something went wrong. Please try again.';
 };
 const redirectTo = () => (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && window.EMRIC_WEB) ? window.EMRIC_WEB + 'auth.html' : location.origin + location.pathname;   // the app has no web address of its own, so email links open a small hosted page
-function afterSignIn(t) { updateAuthUI(); msg(t); $('#authpanel').hidden = true; $('#authpass').value = ''; $('#authconf').value = ''; $('#gpass').value = ''; $('#gconf').value = ''; syncNow(); }
+function afterSignIn(t) { updateAuthUI(); msg(t); $('#authpanel').hidden = true; $('#authpass').value = ''; $('#authconf').value = ''; $('#gpass').value = ''; $('#gconf').value = ''; syncNow(); maybeTour(); }
 async function handleAuthSubmit() {
   const email = $('#authemail').value.trim(), password = $('#authpass').value;
   authErr(''); $('#authresend').hidden = true;
@@ -3769,6 +3766,7 @@ async function handleAuthSubmit() {
   try {
     if (authMode === 'signup') {
       const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo() } });
+      if (!error) lsSet('pp.tour.pending', '1');   // a brand-new account: show the setup guide at first sign-in
       if (error) throw error;
       if (data.user && data.user.identities && !data.user.identities.length) throw new Error('already registered');
       if (data.session) { currentUser = data.user; afterSignIn('Account created and signed in. Your data is syncing.'); }
@@ -3819,6 +3817,7 @@ async function handleSignOut(clear) {
   if (currentUser) { await syncNow(); for (let i = 0; i < 40 && syncing; i++) await new Promise((r) => setTimeout(r, 150)); }   // push pending changes first
   if (clear === true && dirtyNow() && !confirm('Some recent changes have not reached your account yet and will be lost. Clear this device anyway?')) return;
   stopRealtime();
+  if (!NATIVE) await pushDisable();   // this device must stop receiving the signed-out account's reminders
   if (client && client.auth) await client.auth.signOut();
   currentUser = null; sessionToken = '';
   if (clear === true) wipeLocal();
@@ -3854,6 +3853,7 @@ function syncGateUI() {
   $('#gatetitle').textContent = signup ? 'Create an Emric account' : 'Sign in to Emric';
   $('#gconfwrap').hidden = !signup;
   $('#gtermswrap').hidden = !signup;
+  const th = $('#gtourhint'); if (th) th.hidden = !signup;
   $('#gsubmit').textContent = signup ? 'Create account' : 'Sign in';
   $('#gtoggle').textContent = signup ? 'Already have an account? Sign in' : 'Create account instead';
   $('#gpass').autocomplete = signup ? 'new-password' : 'current-password';
@@ -3928,6 +3928,7 @@ async function handleGateSubmit() {
   try {
     if (gateMode === 'signup') {
       const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo() } });
+      if (!error) lsSet('pp.tour.pending', '1');   // a brand-new account: show the setup guide at first sign-in
       if (error) throw error;
       if (data.user && data.user.identities && !data.user.identities.length) throw new Error('already registered');
       if (data.session) { currentUser = data.user; afterSignIn('Account created and signed in. Your data is syncing.'); }
@@ -4071,7 +4072,7 @@ async function syncNow(manual) {
       startRealtime();
     }
     if (!ok) throw new Error('Another device was saving at the same moment. Retrying shortly.');
-    polarAuto();
+    polarAuto(); pushSync();
     syncMsg(manual ? 'Synced with your account at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
   } catch (e) {
     const expired = /jwt|expired|401/i.test(String((e && (e.message || e.code || e.status)) || ''));
@@ -4595,8 +4596,11 @@ function remUi() {
   const cfg = remGet();
   $('#remon').checked = cfg.on; $('#remtime').value = cfg.time; $('#remrest').checked = cfg.skipRest; $('#remnudge').checked = cfg.nudge;
   $('#remopts').hidden = !cfg.on;
-  ['#remon', '#remtime', '#remrest', '#remnudge', '#remtest', '#widgetadd'].forEach((s) => { $(s).disabled = !NATIVE; });
-  $('#remnote').hidden = NATIVE;
+  const why = NATIVE ? '' : pushBlocker(), can = NATIVE || !why;
+  ['#remon', '#remtime', '#remrest', '#remnudge', '#remtest'].forEach((s) => { $(s).disabled = !can; });
+  $('#widgetadd').disabled = !NATIVE;
+  $('#remnote').textContent = why; $('#remnote').hidden = !why;
+  if (!NATIVE && $('#widgetstat')) $('#widgetstat').textContent = 'The home-screen widget is part of the Emric Android app.';
 }
 async function widgetUi() {
   const W = nplug('EmricWidget'), st = $('#widgetstat'); if (!st || !W) return;
@@ -4604,6 +4608,13 @@ async function widgetUi() {
 }
 $('#remon').onchange = async (e) => {
   const on = e.target.checked, st = $('#remstat'); st.textContent = '';
+  if (!NATIVE) {   // browser / installed web app: Web Push, sent by the server
+    if (on) { st.textContent = 'Setting up reminders…'; const why = await pushEnable(); if (why) { e.target.checked = false; st.textContent = why; return; } }
+    else await pushDisable();
+    remSet({ ...remGet(), on }); $('#remopts').hidden = !on;
+    st.textContent = !on ? 'Reminders are off.' : `Reminders are on. You will get one at ${fmtClock(remGet().time)} on your training days. Tap Send a test reminder to check.`;
+    return;
+  }
   if (on) {
     const p = await remPerm(true);
     if (p !== 'granted') { e.target.checked = false; st.textContent = 'Emric can only remind you if notifications are allowed. Turn them on under Android Settings, Apps, Emric, Notifications.'; return; }
@@ -4612,10 +4623,11 @@ $('#remon').onchange = async (e) => {
   await nativeSync(true);
   st.textContent = !on ? 'Reminders are off.' : planDaysFrom(todayStr()).length ? `Reminders are on. You will get one at ${fmtClock(remGet().time)} on your training days.` : 'Reminders are on. Ask your coach for a plan and they will follow it.';
 };
-$('#remtime').onchange = (e) => { if (!e.target.value) { e.target.value = remGet().time; return; } remSet({ ...remGet(), time: e.target.value }); nativeSync(true); $('#remstat').textContent = `Reminder time set to ${fmtClock(e.target.value)}.`; };
-$('#remrest').onchange = (e) => { remSet({ ...remGet(), skipRest: e.target.checked }); nativeSync(true); };
-$('#remnudge').onchange = (e) => { remSet({ ...remGet(), nudge: e.target.checked }); nativeSync(true); };
+$('#remtime').onchange = (e) => { if (!e.target.value) { e.target.value = remGet().time; return; } remSet({ ...remGet(), time: e.target.value }); nativeSync(true); pushSync(); $('#remstat').textContent = `Reminder time set to ${fmtClock(e.target.value)}.`; };
+$('#remrest').onchange = (e) => { remSet({ ...remGet(), skipRest: e.target.checked }); nativeSync(true); pushSync(); };
+$('#remnudge').onchange = (e) => { remSet({ ...remGet(), nudge: e.target.checked }); nativeSync(true); pushSync(); };
 $('#remtest').onclick = async () => {
+  if (!NATIVE) return pushTest($('#remstat'));
   const LN = nplug('LocalNotifications'), st = $('#remstat'); if (!LN) return;
   if ((await remPerm(true)) !== 'granted') { st.textContent = 'Notifications are turned off for Emric. Turn them on under Android Settings, Apps, Emric, Notifications.'; return; }
   try {
@@ -4634,6 +4646,192 @@ $('#widgetadd').onclick = async () => {
     if (r && r.supported) setTimeout(widgetUi, 7000);
   } catch (e) { st.textContent = 'Could not open the widget picker. ' + manual; }
 };
+
+/* ----- Web Push reminders (browsers and installed web apps). The server (supabase/functions/push-reminders) does the timing
+   and the "already logged?" check and sends each reminder as a push message, so it arrives even when Emric is closed.
+   The Android app keeps using its own local notifications above. Functions are declarations and constants are var, so the
+   hooks in sync and sign-out can call these safely at any moment. ----- */
+var VAPID_PUBLIC_KEY = 'PASTE_YOUR_VAPID_PUBLIC_KEY_HERE';   // from: npx web-push generate-vapid-keys (the public half only)
+var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var IS_STANDALONE = (window.matchMedia && matchMedia('(display-mode:standalone)').matches) || navigator.standalone === true;
+var pushT = null;
+function vapidKey() { return (lsGet('pp.vapid', '') || VAPID_PUBLIC_KEY).trim(); }
+function b64uBytes(str) {
+  const b = atob((str + '='.repeat((4 - (str.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+}
+function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), ms))]); }
+/* '' when this device can receive web push, otherwise the reason in plain words */
+function pushBlocker() {
+  if (NATIVE) return '';
+  if (IS_IOS && !IS_STANDALONE) return 'On iPhone and iPad, reminders only work once Emric is on your Home Screen. Tap Share, then Add to Home Screen, open Emric from that new icon, and come back here.';
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'This browser cannot receive push notifications. Try a current Chrome, Edge, Firefox or Safari (iOS 16.4 or newer), on a secure (https) page.';
+  if (!/^[A-Za-z0-9_-]{86,88}$/.test(vapidKey())) return 'Push reminders are not switched on for this copy of Emric yet: the push key is missing. See PUSH_SETUP.md.';
+  return '';
+}
+async function pushSubscription(create) {
+  const reg = await withTimeout(navigator.serviceWorker.ready, 8000);
+  let sub = await reg.pushManager.getSubscription();
+  const want = b64uBytes(vapidKey());
+  if (sub && sub.options && sub.options.applicationServerKey) {   // a subscription made with a different key can never receive our pushes
+    const cur = new Uint8Array(sub.options.applicationServerKey);
+    if (cur.length !== want.length || cur.some((v, i) => v !== want[i])) { await sub.unsubscribe().catch(() => {}); sub = null; }
+  }
+  if (!sub && create) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+  return sub;
+}
+async function pushSave(sub) {
+  const client = getSupabaseClient(); if (!client || !currentUser) throw new Error('Sign in first.');
+  const j = sub.toJSON(), cfg = remGet();
+  const { error } = await client.rpc('emric_save_push', {
+    p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth,
+    p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    p_prefs: { time: cfg.time, nudge: cfg.nudge, nudgeAt: NUDGE_AT, skipRest: cfg.skipRest },
+  });
+  if (error) throw error;
+}
+/* After the box is ticked: ask permission, subscribe, tell the server. Returns '' on success, else the reason. */
+async function pushEnable() {
+  const why = pushBlocker(); if (why) return why;
+  if (!currentUser) return 'Sign in first, so Emric knows which account to send your reminders to.';
+  try {
+    let perm = Notification.permission;
+    if (perm === 'default') perm = await Notification.requestPermission();
+    if (perm !== 'granted') return 'Notifications are blocked for Emric. Allow them for this site in your browser or phone settings, then tick the box again.';
+    await pushSave(await pushSubscription(true));
+    return '';
+  } catch (e) { return 'Could not turn on reminders: ' + ((e && e.message) || 'unknown error') + '.'; }
+}
+async function pushDisable() {
+  if (NATIVE || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const sub = await withTimeout(pushSubscription(false), 4000); if (!sub) return;
+    const client = getSupabaseClient();
+    if (client && currentUser) await client.from('push_subscriptions').delete().eq('endpoint', sub.endpoint).then(() => {}, () => {});
+    await sub.unsubscribe().catch(() => {});
+  } catch (e) {}
+}
+/* keep the server's copy of this device's subscription, time zone and times current (settings change, sign-in, app start) */
+function pushSync() {
+  if (NATIVE || !currentUser || !remGet().on || pushBlocker() || Notification.permission !== 'granted') return;
+  clearTimeout(pushT);
+  pushT = setTimeout(async () => { try { const s = await pushSubscription(true); if (s) await pushSave(s); } catch (e) {} }, 800);
+}
+async function pushTest(st) {
+  const why = pushBlocker(); if (why) { st.textContent = why; return; }
+  if (!currentUser) { st.textContent = 'Sign in first, then try again.'; return; }
+  if (Notification.permission !== 'granted') { st.textContent = 'Notifications are not allowed yet. Switch reminders off and on again, and tap Allow when asked.'; return; }
+  st.textContent = 'Sending a test…';
+  try {
+    await pushSave(await pushSubscription(true));
+    const { data, error } = await getSupabaseClient().functions.invoke('push-reminders', { body: { test: true } });
+    if (error) throw error;
+    st.textContent = data && data.sent ? 'Test sent. It should appear within a few seconds, even if you close Emric.' : 'The server has no saved subscription for this device. Switch reminders off and on again.';
+  } catch (e) { st.textContent = 'Could not send the test: ' + ((e && e.message) || 'unknown error') + '. If this keeps happening, check PUSH_SETUP.md.'; }
+}
+if (!NATIVE && 'serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.t === 'resubscribed') pushSync(); });
+
+/* ----- Setup guide: opens once for a brand-new account, and any time from Settings or the import panel ----- */
+var TOUR_STEPS = [
+  { title: 'Create and confirm your account', html: `
+    <p>Here is everything that happens, in order:</p>
+    <ol>
+      <li>Enter your email and a password of at least 8 characters, tick the box to accept the Terms, then tap <b>Create account</b>.</li>
+      <li>If Emric says <i>Account created! Open the confirmation link we emailed you</i>, open that email and tap the link. Not there? Check Spam or Promotions.</li>
+      <li>Come back to Emric and tap <b>Sign in</b> with the same email and password.</li>
+      <li>No email after a few minutes? On the sign-in screen tap <b>Resend confirmation email</b>. Forgot the password? Tap <b>Forgot password?</b>.</li>
+    </ol>
+    <p class="mute xs">Your runs, plans and settings are saved to your account, so signing in on any other device brings them all back.</p>` },
+  { title: 'Tell your coach about you', html: `
+    <ol>
+      <li>Tap the <b>gear</b> icon to open Settings.</li>
+      <li>Under <b>Training profile</b>, add your goal (for example <i>5K under 25 minutes</i>) and a goal date if you have one, how many days a week you can run, your preferred long-run day, and any days you can't run.</li>
+      <li>Choose a <b>Plan length</b> and a <b>Coaching mode</b>. <i>Suggest changes</i> means you approve each change the coach proposes.</li>
+      <li>Tap <b>Save settings</b>.</li>
+      <li>On the <b>Coach</b> tab, tap <b>Ask coach</b> to get your first plan. The plan is built from these settings and your last 28 days of running, so import your history first (next step) for a better plan.</li>
+    </ol>` },
+  { title: 'Bring in your past runs', html: `
+    <p>Open the import panel: tap the menu (☰), then <b>Data</b>, then <b>Import from Strava, Garmin or Polar</b>. Or tap <b>Import activities</b> on the empty Coach screen. Pick your app below.</p>
+    <details open><summary>Strava</summary>
+      <ol>
+        <li>Use a browser (strava.com), not the phone app. Sign in, and if Strava is set to a language other than English, switch it to English first, because the file's column names follow your language.</li>
+        <li>Click your profile picture, then <b>Settings</b>, then <b>My Account</b>.</li>
+        <li>Under <i>Download or Delete Your Account</i>, click <b>Get Started</b>.</li>
+        <li>Under <i>Download Request</i>, click <b>Request Your Archive</b>. Do not click anything else on that page, especially not <i>Request Account Deletion</i>.</li>
+        <li>Strava emails you a link, which can take a few hours. Download the ZIP.</li>
+        <li>In Emric's import panel, tap <b>Choose ZIP</b> beside Strava and pick that ZIP file. You don't need to unzip it.</li>
+      </ol></details>
+    <details><summary>Garmin</summary>
+      <ol>
+        <li>On a computer, sign in at connect.garmin.com and open <b>Activities</b>, then <b>All Activities</b>. Optionally filter to <i>Running</i>.</li>
+        <li>Scroll to the very bottom of the list until every activity you want has loaded. Garmin only exports what has loaded on the page.</li>
+        <li>Click <b>Export CSV</b> at the top right.</li>
+        <li>In Emric's import panel, set the units box beside Garmin to match your Garmin Connect distance units (km or mi), then tap <b>Choose CSV</b> and pick the file.</li>
+      </ol>
+      <p class="mute xs">Garmin's CSV doesn't include your activity notes, so add any you want in Emric afterwards.</p></details>
+    <details><summary>Polar</summary>
+      <ol>
+        <li>Make sure your Polar watch syncs to Polar Flow (flow.polar.com).</li>
+        <li>In Emric's import panel, tap <b>Connect</b> beside Polar. Sign in to Polar Flow and approve access, and you'll return to Emric.</li>
+        <li>Tap <b>Sync</b> to bring in your sessions. After that Emric checks for new ones itself. <b>Disconnect</b> removes the link any time.</li>
+      </ol></details>
+    <details><summary>Other apps (COROS, Suunto, Apple Watch, Fitbit, Wahoo, Zepp…)</summary>
+      <ol>
+        <li><b>Easiest:</b> most watch apps can share your runs to Strava from their own settings. Link yours to Strava once, then follow the Strava steps above.</li>
+        <li><b>Or use any CSV or JSON file:</b> menu, <b>Data</b>, <b>Import CSV / JSON</b>. It needs a <b>Date</b> column. Emric also recognises Activity Type (or Type, Sport), Title (or Name), Distance (km; use <i>Distance Mi</i> for miles), Time or Duration (seconds or h:mm:ss), Avg Heart Rate, Elevation Gain and Notes.</li>
+        <li>Emric can't read single .fit, .gpx or .tcx files directly. Log those runs by hand (Log tab, <b>Log a workout</b>) or send them through Strava.</li>
+      </ol></details>
+    <p class="mute xs">Importing the same file twice is safe: Emric skips workouts it already has and tells you how many were new.</p>
+    <div class="row"><button class="btn sky" id="tourimport" type="button">Open the import panel</button></div>` },
+  { title: 'Turn on run reminders', html: `
+    <ol>
+      <li>Tap the gear icon, open <b>Reminders &amp; widget</b>, and tick <b>Remind me on training days</b>.</li>
+      <li>When your phone or browser asks to allow notifications, tap <b>Allow</b>.</li>
+      <li>Choose your reminder time, whether to skip rest days, and whether to get an evening nudge if you still haven't logged the run.</li>
+      <li>Tap <b>Send a test reminder</b>. It should appear within seconds, even if you close Emric.</li>
+    </ol>
+    <p><b>iPhone or iPad:</b> reminders only work once Emric is on your Home Screen. Tap Share, then <b>Add to Home Screen</b>, open Emric from that icon, then do the steps above.</p>
+    <p class="mute xs">Reminders stay quiet once today's run is in your log. They need a plan from your coach, so ask for one first.</p>` },
+  { title: 'Log runs and keep going', html: `
+    <ol>
+      <li>After each run, open the <b>Log</b> tab and tap <b>Log a workout</b>, or import a fresh export. Polar sessions arrive on their own once connected.</li>
+      <li>Tell the coach how it felt (easy, long, hard, or spot on). The coach treats your label as fact.</li>
+      <li>Install Emric like an app. Chrome: menu, then <b>Install app</b> (or <b>Add to Home screen</b>). Safari: Share, then <b>Add to Home Screen</b>.</li>
+      <li>Reopen this guide any time from Settings, <b>Account &amp; sync</b>, <b>Setup guide</b>, or from <b>How do I get my files?</b> in the import panel.</li>
+    </ol>
+    <p>That's it. Good luck with the training!</p>` },
+];
+var tourI = 0;
+function tourRender() {
+  const last = TOUR_STEPS.length - 1, st = TOUR_STEPS[tourI];
+  $('#tourtitle').textContent = st.title;
+  $('#tourbody').innerHTML = st.html;
+  $('#tourstep').textContent = `Step ${tourI + 1} of ${TOUR_STEPS.length}`;
+  $('#tourdots').innerHTML = TOUR_STEPS.map((_, i) => `<i class="${i === tourI ? 'on' : ''}"></i>`).join('');
+  $('#tourback').hidden = tourI === 0;
+  $('#tournext').textContent = tourI === last ? 'Done' : 'Next';
+  $('#tourskip').hidden = tourI === last;
+  const imp = $('#tourimport'); if (imp) imp.onclick = () => { closeTour(); $('#stravabtn').onclick(); };
+  $('#tour').scrollTop = 0;
+}
+function openTour(i) { tourI = Math.max(0, Math.min(TOUR_STEPS.length - 1, i || 0)); $('#tour').hidden = false; tourRender(); try { $('#tournext').focus({ preventScroll: true }); } catch (e) {} }
+function closeTour() {
+  $('#tour').hidden = true; lsSet('pp.tour.pending', '');
+  if (currentUser) lsSet('pp.tour.' + currentUser.id, '1');
+}
+/* once per account, only for a new one (just signed up, or created in the last 3 days) */
+function maybeTour() {
+  if (!currentUser || !$('#tour').hidden || lsGet('pp.tour.' + currentUser.id, '')) return;
+  const made = Date.parse(currentUser.created_at || ''), fresh = lsGet('pp.tour.pending', '') === '1' || (!isNaN(made) && Date.now() - made < 3 * 864e5);
+  if (fresh) openTour(0);
+}
+$('#tournext').onclick = () => { if (tourI >= TOUR_STEPS.length - 1) closeTour(); else { tourI++; tourRender(); } };
+$('#tourback').onclick = () => { if (tourI > 0) { tourI--; tourRender(); } };
+$('#tourskip').onclick = closeTour;
+$('#settourbtn').onclick = () => { toggleSettings(false); openTour(0); };
+$('#stravahelp').onclick = () => openTour(2);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#tour').hidden) closeTour(); });
+if (currentUser) maybeTour();
 
 /* ----- Android Back button: close the top layer first, then step back to Coach, then leave the app ----- */
 function androidBack() {
