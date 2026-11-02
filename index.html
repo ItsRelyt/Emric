@@ -4651,7 +4651,7 @@ $('#widgetadd').onclick = async () => {
    and the "already logged?" check and sends each reminder as a push message, so it arrives even when Emric is closed.
    The Android app keeps using its own local notifications above. Functions are declarations and constants are var, so the
    hooks in sync and sign-out can call these safely at any moment. ----- */
-var VAPID_PUBLIC_KEY = 'PASTE_YOUR_VAPID_PUBLIC_KEY_HERE';   // from: npx web-push generate-vapid-keys (the public half only)
+var VAPID_PUBLIC_KEY = 'BP-enJPMNqlqxKnnqhSExsojIN4YU6mKb2raCziH3OdSCLLNcjRzF9vV5uyyf1LHr1ob1wkK95cOqSCJaImflnw';   // from: npx web-push generate-vapid-keys (the public half only)
 var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 var IS_STANDALONE = (window.matchMedia && matchMedia('(display-mode:standalone)').matches) || navigator.standalone === true;
 var pushT = null;
